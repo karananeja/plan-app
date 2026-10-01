@@ -181,3 +181,29 @@ Spec: [../specs/02-expense-splitting-and-nudges.md](../specs/02-expense-splittin
 
 ### Open / Next
 - [ ] Implement ticket 01 (split calculator) with `/tdd`.
+
+---
+
+## Entry 8 — 2026-10-01 — Ticket 01: split calculator (TDD)
+
+**Session goal:** Implement the split calculator test-first.
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- `/tdd`. The user approved the seam (one public `splitExpense` function in the domain package), errors returned as values, and adding fast-check ("yes").
+
+### Decided
+- **Interface**: `splitExpense(input) → SplitResult`. No currency in the input; it works in minor units only, so zero-decimal currencies need nothing special. `value` means minor units (exact), basis points (percentage) or Share Units (shares).
+- **One allocation core for all methods**: proportional to weights (1 each for equal; `value` otherwise), using **BigInt** exact arithmetic. Each Share is floored, then leftover units go to the largest remainders, ties broken by entry order. Exact amounts that add up come out unchanged, because their weights equal the amounts. — **why:** one rounding rule everywhere, and no overflow on total × weight.
+- **Validation as values** with stable codes and a `remaining` figure (negative means over-assigned) for the form's live feedback. Exact amounts and percentages of 0 are allowed; Share Units must be whole and ≥ 1; a fractional total or value is invalid.
+
+### Changed
+- `packages/domain`: `split.ts`, `split.test.ts` (21 tests incl. a 2000-run property test); `fast-check` dev dependency.
+
+### Verified
+- `pnpm test`: domain 30/30, api 47/47. Every example test went red first. The Exact Amounts test passed on first run, because the shared weight-based core already handles it (expected and noted before running).
+- **Property test checked against a bug**: with leftover handout broken, it failed and shrank to `{ total: 1, shares 1:1 }`.
+- Lint and typecheck are clean.
+
+### Open / Next
+- [ ] Ticket 02: equal-split Group Expense (with Spec 01 carry-overs).
