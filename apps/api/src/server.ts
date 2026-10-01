@@ -2,7 +2,7 @@ import { serve } from "@hono/node-server";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createApp } from "./app.ts";
-import { apiPort, authSecret, databasePath, webOrigin } from "./config.ts";
+import { apiPort, authSecret, databasePath, googleOAuth, webOrigin } from "./config.ts";
 import { openDb } from "./db/client.ts";
 import { consoleEmailSender } from "./email.ts";
 
@@ -11,7 +11,7 @@ mkdirSync(dirname(path), { recursive: true });
 const app = createApp({
   db: openDb(path),
   email: consoleEmailSender,
-  auth: { secret: authSecret(), origin: webOrigin() },
+  auth: { secret: authSecret(), origin: webOrigin(), google: googleOAuth() },
 });
 
 serve({ fetch: app.fetch, port: apiPort() }, (info) => {

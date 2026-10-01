@@ -10,6 +10,8 @@ export type AuthConfig = {
   secret: string;
   /** Origin the browser uses (the web app); links in emails point here. */
   origin: string;
+  /** Google OAuth client. Without it, Google sign-in isn't offered. */
+  google?: { clientId: string; clientSecret: string };
 };
 
 export function createAuth({ db, email, config }: { db: Db; email: EmailSender; config: AuthConfig }) {
@@ -35,6 +37,7 @@ export function createAuth({ db, email, config }: { db: Db; email: EmailSender; 
         });
       },
     },
+    socialProviders: config.google ? { google: config.google } : {},
     emailVerification: {
       sendOnSignUp: true,
       sendVerificationEmail: async ({ user, url }) => {

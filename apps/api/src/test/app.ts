@@ -17,16 +17,17 @@ export class FakeEmailSender implements EmailSender {
 }
 
 export const TEST_ORIGIN = "http://localhost:5173";
+export const TEST_GOOGLE = { clientId: "test-client-id.apps.googleusercontent.com", clientSecret: "test-client-secret" };
 export const TEST_AUTH = { secret: "test-secret-at-least-32-characters-long", origin: TEST_ORIGIN };
 
 /** A fresh app on a fresh in-memory database, with a fake email sender. */
-export function createTestApp() {
+export function createTestApp(options: { google?: boolean } = {}) {
   const db = createTestDb();
   const email = new FakeEmailSender();
   const app = createApp({
     db,
     email,
-    auth: TEST_AUTH,
+    auth: options.google ? { ...TEST_AUTH, google: TEST_GOOGLE } : TEST_AUTH,
   });
   return { app, db, email };
 }

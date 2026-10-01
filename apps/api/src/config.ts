@@ -25,3 +25,10 @@ export function authSecret(): string {
 export function webOrigin(): string {
   return process.env.WEB_ORIGIN ?? `http://localhost:${process.env.WEB_PORT ?? 5173}`;
 }
+
+/** Google OAuth client from GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET; undefined when either is missing. */
+export function googleOAuth(): { clientId: string; clientSecret: string } | undefined {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  return clientId && clientSecret ? { clientId, clientSecret } : undefined;
+}

@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { AuthCard, FormError } from "@/components/auth-card.tsx";
+import { GoogleButton } from "@/components/google-button.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -34,6 +35,7 @@ export function SignUpPage() {
   return (
     <AuthCard title="Create your account" description="Split bills with friends without chasing anyone.">
       <form onSubmit={onSubmit} className="grid gap-4">
+        <GoogleButton />
         <div className="grid gap-2">
           <Label htmlFor="name">Name</Label>
           <Input id="name" name="name" required autoComplete="name" />

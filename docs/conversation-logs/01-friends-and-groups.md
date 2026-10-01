@@ -321,3 +321,33 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] Ticket 03 (Google sign-in), then Ticket 05, which also fixes the invited sign-up 500.
+
+---
+
+## Entry 12 — 2026-10-01 — Ticket 03: Google sign-in (TDD)
+
+**Session goal:** Implement Ticket 03 test-first (second half of "go ahead with both").
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- Seams approved with Ticket 04: the API app in-process, with **Google's HTTP token endpoint faked**, covering 3 tests (options endpoint, new Google user, linking to an existing password account).
+
+### Decided
+- **Fake at Google's token endpoint only.** better-auth decodes, rather than verifies, the id token it gets back from that endpoint. So a stubbed `fetch` for `oauth2.googleapis.com/token` lets tests drive the real `/sign-in/social` and `/callback/google` flow. No fallback to a narrower seam was needed.
+- **Linking requires a verified local email** (better-auth's default `requireLocalEmailVerified`). — **why:** it prevents account pre-hijacking. The test changed from "links to a password account" to "links to a **verified** password account", and a test was added for the refusal (`/sign-in?error=account_not_linked`). Recorded on Ticket 03.
+- **`GET /api/auth/options`** reports `{ google }`, and the web app shows "Continue with Google" only when it's true. OAuth errors return to `/sign-in` (`errorCallbackURL`) with a readable message.
+- Config: `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, where both are needed to enable Google. The OAuth redirect URI is `{WEB_ORIGIN}/api/auth/callback/google`.
+
+### Changed
+- `apps/api`: Google provider in `auth.ts`; the `/auth/options` route; `googleOAuth()` config; server wiring; test helper `test/google.ts` (unsigned id token + `fetch` stub); `google.test.ts` (4 tests).
+- `apps/web`: `GoogleButton` on the sign-in and sign-up pages; OAuth error message on sign-in.
+- `README.md` (Google setup steps, linking rule), `.env.example`.
+
+### Verified
+- `pnpm test`: api 20/20, domain 9/9. The new-Google-user test passed on first run, because the provider was configured in the options-test step. It asserts the exact faked name and email through `/api/me`, which only the real callback can produce. The linking test went red, and the cause was the test's assumption, not the code.
+- Typecheck, lint and web build are clean.
+- The real dev server: `google:false` without credentials. With dummy credentials, `google:true`, and the redirect to `accounts.google.com` carries `redirect_uri=http://localhost:5173/api/auth/callback/google`, which matches the README.
+- **Not verified:** a real Google sign-in. It needs the user's OAuth client ID and secret.
+
+### Open / Next
+- [ ] Ticket 05 next: claiming invites, and the **invited-email sign-up 500** found in Ticket 04.

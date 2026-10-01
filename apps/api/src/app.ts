@@ -35,6 +35,7 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
       db.get(sql`select 1`);
       return c.json({ status: "ok", db: "ok" } as const);
     })
+    .get("/auth/options", (c) => c.json({ google: Boolean(authConfig.google) }))
     .on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw))
     .get("/me", async (c) => {
       const session = await auth.api.getSession({ headers: c.req.raw.headers });

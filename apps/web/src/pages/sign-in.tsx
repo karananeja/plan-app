@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { AuthCard, FormError } from "@/components/auth-card.tsx";
+import { GoogleButton, oauthErrorMessage } from "@/components/google-button.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -10,7 +11,8 @@ import { authClient } from "@/lib/auth-client.ts";
 export function SignInPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  const [error, setError] = useState<string | null>(oauthErrorMessage(params.get("error")));
   const [pending, setPending] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -30,6 +32,7 @@ export function SignInPage() {
   return (
     <AuthCard title="Sign in">
       <form onSubmit={onSubmit} className="grid gap-4">
+        <GoogleButton />
         <div className="grid gap-2">
           <Label htmlFor="email">Email</Label>
           <Input id="email" name="email" type="email" required autoComplete="email" />
