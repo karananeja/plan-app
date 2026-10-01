@@ -26,3 +26,14 @@ export const addGroupMembersInput = z.object({
   emails: z.array(z.string().trim().email()).min(1).max(50),
 });
 export type AddGroupMembersInput = z.infer<typeof addGroupMembersInput>;
+
+export const updateGroupInput = z
+  .object({
+    name: z.string().trim().min(1).max(60),
+    emoji: z.string().trim().min(1).max(16),
+    colour: z.enum(GROUP_COLOURS),
+    currency: currencyCode,
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, "Nothing to change");
+export type UpdateGroupInput = z.infer<typeof updateGroupInput>;

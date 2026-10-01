@@ -4,11 +4,20 @@
 
 **Blocked by:** 06 (Create a Group and list Groups).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Rename, change emoji, change colour: each records a `GroupUpdated` Activity with what changed
-- [ ] Archive succeeds only when all Group Balances (via the Balances interface) are zero, and records `GroupArchived`; archived Groups reject edits and new members
-- [ ] Un-archive restores normal behaviour and records `GroupUpdated`
-- [ ] Only the creator can delete, and it records `GroupDeleted` (members in the audience); a non-creator gets an error
-- [ ] The Group's currency can be changed (until Spec 02 adds Expenses, it's always changeable)
-- [ ] Service-level tests cover the above. Archive-blocked-by-balance is tested with a stubbed Balances interface; Spec 03 adds the real-ledger version
+- [x] Rename, change emoji, change colour: each records a `GroupUpdated` Activity with what changed
+- [x] Archive succeeds only when all Group Balances (via the Balances interface) are zero, and records `GroupArchived`; archived Groups reject edits and new members
+- [x] Un-archive restores normal behaviour and records `GroupUpdated`
+- [x] Only the creator can delete, and it records `GroupDeleted` (members in the audience); a non-creator gets an error
+- [x] The Group's currency can be changed (until Spec 02 adds Expenses, it's always changeable)
+- [x] Service-level tests cover the above. Archive-blocked-by-balance is tested with a stubbed Balances interface; Spec 03 adds the real-ledger version
+
+## Comments
+
+- 2026-10-01: Done.
+  - `PATCH /api/groups/:id` (any changed subset of name, emoji, colour, currency); `POST …/archive` and `…/unarchive`; `DELETE …` (creator only).
+  - Deleting removes the Group and its memberships but keeps Activity, with the name in `GroupDeleted.data`.
+  - Spec 02 still has to block deletion and currency changes once a Group has Expenses.
+  - Also fixed `activityFor` ordering for events in the same millisecond (now tie-broken by insertion order).
+  - Covered by the combined end-to-end check after Ticket 10.

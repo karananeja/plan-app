@@ -1,9 +1,9 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { Db, Tx } from "../db/client.ts";
 import { activity, activityAudience } from "../db/schema.ts";
 
-export type ActivityType = "FriendAdded" | "PersonInvited" | "InviteClaimed" | "GroupCreated" | "GroupMemberAdded";
+export type ActivityType = "FriendAdded" | "PersonInvited" | "InviteClaimed" | "GroupCreated" | "GroupMemberAdded" | "GroupUpdated" | "GroupArchived" | "GroupDeleted" | "GroupMemberLeft" | "GroupMemberRemoved" | "FriendRemoved";
 
 export type NewActivity = {
   type: ActivityType;
@@ -37,7 +37,7 @@ export function recordActivity(tx: Tx, a: NewActivity) {
     .run();
 }
 
-/** Activity involving a person, newest first. */
+/** Activity involving a person, newest first (ties in the same millisecond: latest recorded first). */
 export function activityFor(db: Db, personId: string) {
   return db
     .select({
@@ -53,7 +53,7 @@ export function activityFor(db: Db, personId: string) {
     .from(activityAudience)
     .innerJoin(activity, eq(activity.id, activityAudience.activityId))
     .where(eq(activityAudience.personId, personId))
-    .orderBy(desc(activity.occurredAt))
+    .orderBy(desc(activity.occurredAt), desc(sql`${activity}.rowid`))
     .all()
     .map(({ subjectType, subjectId, ...rest }) => ({ ...rest, subject: { type: subjectType, id: subjectId } }));
 }

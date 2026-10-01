@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { addFriendInput, addGroupMembersInput, createGroupInput, updateProfileInput } from "@plan-app/domain";
+import { addFriendInput, addGroupMembersInput, createGroupInput, updateGroupInput, updateProfileInput } from "@plan-app/domain";
 import { eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { createAuth, type AuthConfig } from "./auth.ts";
@@ -8,7 +8,16 @@ import { person, user } from "./db/schema.ts";
 import type { EmailSender } from "./email.ts";
 import { noTransactionsYet, type Balances } from "./balances/index.ts";
 import { NotFoundError, RuleError } from "./errors.ts";
-import { addGroupMembers, createGroup, getGroup, listGroups } from "./groups/service.ts";
+import {
+  addGroupMembers,
+  archiveGroup,
+  createGroup,
+  deleteGroup,
+  getGroup,
+  listGroups,
+  unarchiveGroup,
+  updateGroup,
+} from "./groups/service.ts";
 import { addFriend, listFriends } from "./friends/service.ts";
 import { invitedPersonFor } from "./people/index.ts";
 import { createMiddleware } from "hono/factory";
@@ -82,6 +91,22 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
       c.json(await createGroup(groupsDeps, c.var.me, c.req.valid("json"))),
     )
     .get("/groups/:id", signedIn, (c) => c.json(getGroup(groupsDeps, c.var.me, c.req.param("id"))))
+    .patch("/groups/:id", signedIn, zValidator("json", updateGroupInput), (c) => {
+      updateGroup(groupsDeps, c.var.me, c.req.param("id"), c.req.valid("json"));
+      return c.json({ ok: true } as const);
+    })
+    .delete("/groups/:id", signedIn, (c) => {
+      deleteGroup(groupsDeps, c.var.me, c.req.param("id"));
+      return c.json({ ok: true } as const);
+    })
+    .post("/groups/:id/archive", signedIn, (c) => {
+      archiveGroup(groupsDeps, c.var.me, c.req.param("id"));
+      return c.json({ ok: true } as const);
+    })
+    .post("/groups/:id/unarchive", signedIn, (c) => {
+      unarchiveGroup(groupsDeps, c.var.me, c.req.param("id"));
+      return c.json({ ok: true } as const);
+    })
     .post("/groups/:id/members", signedIn, zValidator("json", addGroupMembersInput), async (c) => {
       await addGroupMembers(groupsDeps, c.var.me, c.req.param("id"), c.req.valid("json"));
       return c.json({ ok: true } as const);

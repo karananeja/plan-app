@@ -448,3 +448,28 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] Ticket 08.
+
+---
+
+## Entry 16 — 2026-10-01 — Ticket 08: edit, archive and delete a Group (TDD)
+
+**Participants:** user, Claude Code (Opus 5.5). Seams approved in Entry 15.
+
+### Decided
+- **Edit**: `PATCH /api/groups/:id` with `updateGroupInput` (a non-empty subset of name, emoji, colour, currency). Any member; active Groups only. Records `GroupUpdated` with `data.changes = { field: { from, to } }`, only for fields that actually changed.
+- **Archive**: `POST …/archive`, any member, only when **every** member's `groupBalances` is empty, otherwise a 400 saying everyone must be settled up. Records `GroupArchived`. Archived Groups reject edits and new members (400).
+- **Un-archive**: `POST …/unarchive`, recorded as `GroupUpdated` with `changes.archived: { from: true, to: false }`.
+- **Delete**: `DELETE …`, creator only (400 otherwise). Records `GroupDeleted` (data: name) for all members, then deletes the memberships and the Group. Activity rows are kept (their `groupId` isn't a foreign key).
+- **Bug fix**: `activityFor` now orders by `occurredAt` desc, then `rowid` desc. — **why:** archive and unarchive in the same millisecond came back in arbitrary order. The Spec 04 feed would have had the same bug.
+
+### Changed
+- `apps/api`: `updateGroup`, `archiveGroup`, `unarchiveGroup`, `deleteGroup`, `memberIds`; routes; activity types; `delete()` on the test browser; `group-lifecycle.test.ts` (5 tests).
+- `packages/domain`: `updateGroupInput`.
+- `apps/web`: `EditGroupDialog`; Archive, Un-archive and Delete (creator only, with a confirm) on the Group page; "Archived" badge and a separate Archived section in the Groups list.
+
+### Verified
+- `pnpm test`: api 40/40. Every new test went red first. The un-archive test went red a second time because of the ordering bug, which was fixed in product code. The suite was then run 3 times with no flakes.
+- Typecheck and lint are clean. The end-to-end check runs after Ticket 10.
+
+### Open / Next
+- [ ] Ticket 09.

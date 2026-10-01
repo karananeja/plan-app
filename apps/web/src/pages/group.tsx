@@ -1,18 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FormEvent } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { BalanceText } from "@/components/balance-text.tsx";
+import { EditGroupDialog } from "@/components/edit-group-dialog.tsx";
 import { GroupIcon } from "@/components/group-icon.tsx";
 import { FormError } from "@/components/auth-card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { api } from "@/lib/api.ts";
-import { initials } from "@/lib/me.ts";
+import { initials, useMe } from "@/lib/me.ts";
 
 export function GroupPage() {
   const { id = "" } = useParams();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const me = useMe();
+  const action = useMutation({
+    mutationFn: async (kind: "archive" | "unarchive" | "delete") => {
+      const target = api.groups[":id"];
+      const res =
+        kind === "delete"
+          ? await target.$delete({ param: { id } })
+          : kind === "archive"
+            ? await target.archive.$post({ param: { id } })
+            : await target.unarchive.$post({ param: { id } });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "That didn't work. Please try again.");
+      }
+      return kind;
+    },
+    onSuccess: async (kind) => {
+      await queryClient.invalidateQueries({ queryKey: ["groups"] });
+      if (kind === "delete") navigate("/groups");
+    },
+  });
   const addMembers = useMutation({
     mutationFn: async (emails: string[]) => {
       const res = await api.groups[":id"].members.$post({ param: { id }, json: { emails } });
@@ -57,13 +80,36 @@ export function GroupPage() {
     <div className="grid max-w-2xl gap-6">
       <div className="flex items-center gap-4">
         <GroupIcon emoji={g.emoji} colour={g.colour} className="size-14 text-3xl" />
-        <div>
-          <h1 className="text-2xl font-semibold">{g.name}</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-semibold">
+            {g.name} {g.archived && <Badge variant="secondary" className="ml-1 align-middle">Archived</Badge>}
+          </h1>
           <p className="text-sm text-muted-foreground">
             {g.memberCount} members · {g.currency}
           </p>
         </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          {g.archived ? (
+            <Button variant="outline" size="sm" onClick={() => action.mutate("unarchive")} disabled={action.isPending}>Un-archive</Button>
+          ) : (
+            <>
+              <EditGroupDialog group={g} />
+              <Button variant="outline" size="sm" onClick={() => action.mutate("archive")} disabled={action.isPending}>Archive</Button>
+            </>
+          )}
+          {me.data?.person?.id === g.createdById && (
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={action.isPending}
+              onClick={() => window.confirm(`Delete "${g.name}" for everyone? This can't be undone.`) && action.mutate("delete")}
+            >
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
+      <FormError message={action.error?.message ?? null} />
       <section className="grid gap-2">
         <h2 className="font-medium">Members</h2>
         <ul className="divide-y rounded-md border">

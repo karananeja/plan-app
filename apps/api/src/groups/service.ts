@@ -1,4 +1,4 @@
-import { DEFAULT_GROUP_EMOJI, type AddGroupMembersInput, type CreateGroupInput } from "@plan-app/domain";
+import { DEFAULT_GROUP_EMOJI, type AddGroupMembersInput, type CreateGroupInput, type UpdateGroupInput } from "@plan-app/domain";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { Balances } from "../balances/index.ts";
@@ -103,6 +103,88 @@ export async function addGroupMembers({ db, email: emailSender, origin }: Groups
     return addMembers(tx, me, groupId, emails).filter((f) => f.invited).map((f) => f.person.email);
   });
   for (const e of invited) await sendInvite(emailSender, origin, me, e);
+}
+
+function memberIds(tx: Db | Tx, groupId: string) {
+  return tx.select({ id: groupMember.personId }).from(groupMember).where(eq(groupMember.groupId, groupId)).all().map((m) => m.id);
+}
+
+/** Any member edits an active Group. Records GroupUpdated with each changed field's from/to. */
+export function updateGroup({ db }: GroupsDeps, me: Person, groupId: string, input: UpdateGroupInput) {
+  db.transaction((tx) => {
+    const g = requireMembership(tx, me, groupId);
+    requireActive(g);
+    const changes: Record<string, { from: string; to: string }> = {};
+    for (const key of ["name", "emoji", "colour", "currency"] as const) {
+      const to = input[key];
+      if (to !== undefined && to !== g[key]) changes[key] = { from: g[key], to };
+    }
+    if (Object.keys(changes).length === 0) return;
+    tx.update(group)
+      .set(Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.to])))
+      .where(eq(group.id, groupId))
+      .run();
+    recordActivity(tx, {
+      type: "GroupUpdated",
+      actorId: me.id,
+      subject: { type: "group", id: groupId },
+      groupId,
+      audience: memberIds(tx, groupId),
+      data: { changes },
+    });
+  });
+}
+
+/** Any member archives a Group once every member is Settled Up in it. */
+export function archiveGroup({ db, balances }: GroupsDeps, me: Person, groupId: string) {
+  db.transaction((tx) => {
+    const g = requireMembership(tx, me, groupId);
+    requireActive(g);
+    const members = memberIds(tx, groupId);
+    if (members.some((id) => balances.groupBalances(groupId, id).length > 0)) {
+      throw new RuleError("Everyone needs to be settled up before this group can be archived.");
+    }
+    tx.update(group).set({ archivedAt: new Date() }).where(eq(group.id, groupId)).run();
+    recordActivity(tx, { type: "GroupArchived", actorId: me.id, subject: { type: "group", id: groupId }, groupId, audience: members });
+  });
+}
+
+/** Any member un-archives a Group. Recorded as GroupUpdated (archived: true → false). */
+export function unarchiveGroup({ db }: GroupsDeps, me: Person, groupId: string) {
+  db.transaction((tx) => {
+    const g = requireMembership(tx, me, groupId);
+    if (!g.archivedAt) return;
+    tx.update(group).set({ archivedAt: null }).where(eq(group.id, groupId)).run();
+    recordActivity(tx, {
+      type: "GroupUpdated",
+      actorId: me.id,
+      subject: { type: "group", id: groupId },
+      groupId,
+      audience: memberIds(tx, groupId),
+      data: { changes: { archived: { from: true, to: false } } },
+    });
+  });
+}
+
+/**
+ * The creator deletes a Group (Spec 02 will also require it to have no Expenses).
+ * Members are told through GroupDeleted; past Activity is kept so history still makes sense.
+ */
+export function deleteGroup({ db }: GroupsDeps, me: Person, groupId: string) {
+  db.transaction((tx) => {
+    const g = requireMembership(tx, me, groupId);
+    if (g.createdById !== me.id) throw new RuleError("Only the person who created this group can delete it.");
+    recordActivity(tx, {
+      type: "GroupDeleted",
+      actorId: me.id,
+      subject: { type: "group", id: groupId },
+      groupId,
+      audience: memberIds(tx, groupId),
+      data: { name: g.name },
+    });
+    tx.delete(groupMember).where(eq(groupMember.groupId, groupId)).run();
+    tx.delete(group).where(eq(group.id, groupId)).run();
+  });
 }
 
 const memberCount = sql<number>`(select count(*) from ${groupMember} gm where gm.group_id = ${group.id})`;
