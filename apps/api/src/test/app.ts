@@ -1,5 +1,5 @@
 import { createApp } from "../app.ts";
-import type { Balances, CurrencyAmount } from "../balances/index.ts";
+import type { Balances, CurrencyAmount, GroupDebt } from "../balances/index.ts";
 import type { Email, EmailSender } from "../email.ts";
 import { createTestDb } from "./db.ts";
 
@@ -89,6 +89,9 @@ export class StubBalances implements Balances {
   }
   groupBalances(groupId: string, personId: string) {
     return this.group.get(`${groupId}|${personId}`) ?? [];
+  }
+  groupDebts(_groupId: string): GroupDebt[] {
+    return [];
   }
   setNet(me: string, other: string, amounts: CurrencyAmount[]) {
     this.net.set(`${me}|${other}`, amounts);

@@ -11,10 +11,15 @@ export interface Balances {
   netBalances(me: string, other: string): CurrencyAmount[];
   /** A Group Member's Group Balance: positive means the Group owes them. */
   groupBalances(groupId: string, personId: string): CurrencyAmount[];
+  /** Group Debts: who owes whom within a Group, netted per pair and currency (amount > 0). */
+  groupDebts(groupId: string): GroupDebt[];
 }
+
+export type GroupDebt = { fromId: string; toId: string; currency: string; amount: number };
 
 /** Until Spec 03 there are no Transactions, so every balance is Settled Up. */
 export const noTransactionsYet: Balances = {
   netBalances: () => [],
   groupBalances: () => [],
+  groupDebts: () => [],
 };

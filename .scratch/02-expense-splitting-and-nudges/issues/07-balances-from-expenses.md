@@ -4,12 +4,19 @@
 
 **Blocked by:** 02 (Add an equal-split Group Expense); 04 (Non-group Expenses and the Friend page).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Net Balance between two people nets Debts both ways across all their Groups and non-group Expenses (the requirement's $125 / $100 → $25 example)
-- [ ] Group Balance per member, and Group Debts (who owes whom within a Group)
-- [ ] Currencies are never added together
-- [ ] Editing or deleting an Expense changes the balances accordingly
-- [ ] Invariants: the sum of all Group Balances in a Group is 0; Net Balance(A,B) = −Net Balance(B,A)
-- [ ] Spec 01 guards (archive Group, leave or remove a member, remove a Friend) get real-ledger "blocked while non-zero" tests
-- [ ] Friends list, Group page and Friend page show the real amounts
+- [x] Net Balance between two people nets Debts both ways across all their Groups and non-group Expenses (the requirement's $125 / $100 → $25 example)
+- [x] Group Balance per member, and Group Debts (who owes whom within a Group)
+- [x] Currencies are never added together
+- [ ] Editing or deleting an Expense changes the balances accordingly (**moved to tickets 05 and 06**, which add edit and delete)
+- [x] Invariants: the sum of all Group Balances in a Group is 0; Net Balance(A,B) = −Net Balance(B,A)
+- [x] Spec 01 guards (archive Group, leave or remove a member, remove a Friend) get real-ledger "blocked while non-zero" tests
+- [x] Friends list, Group page and Friend page show the real amounts
+
+## Comments
+
+- 2026-10-01: Done.
+  - `ledgerBalances(db)` is the app's default `Balances`, derived from non-deleted Expenses (each non-payer Participant owes the Payer their Share), per currency, nothing stored.
+  - `groupDebts(groupId)` added; the Group page shows "Who owes whom", and the Friend page shows the Net Balance.
+  - The "edit/delete changes balances" criterion moved to tickets 05 and 06.

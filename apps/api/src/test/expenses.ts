@@ -31,6 +31,7 @@ export const addExpense = (b: Browser, body: Record<string, unknown>) =>
 
 export type FriendPage = {
   personId: string; name: string; email: string; invited: boolean;
+  netBalances: { currency: string; amount: number }[];
   expenses: ExpenseSummary[];
 };
 export const friendPage = (b: Browser, personId: string) => json<FriendPage>(b.get(`/api/friends/${personId}`));

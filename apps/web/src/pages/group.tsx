@@ -167,6 +167,29 @@ export function GroupPage() {
         )}
         <FormError message={addMembers.error?.message ?? null} />
       </section>
+      {g.debts.length > 0 && (
+        <section className="grid gap-2">
+          <h2 className="font-medium">Who owes whom</h2>
+          <ul className="divide-y rounded-md border text-sm">
+            {g.debts.map((d) => {
+              const nameOf = (id: string) => {
+                if (id === me.data?.person?.id) return "You";
+                const m = g.members.find((x) => x.personId === id);
+                return m ? (m.invited ? m.email : m.name) : "Someone";
+              };
+              const from = nameOf(d.fromId);
+              return (
+                <li key={`${d.fromId}-${d.toId}-${d.currency}`} className="flex justify-between p-3">
+                  <span>
+                    {from} {from === "You" ? "owe" : "owes"} {nameOf(d.toId).replace(/^You$/, "you")}
+                  </span>
+                  <span className="tabular-nums">{formatMoney(d.amount, d.currency)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       <section className="grid gap-2">
         <div className="flex items-center justify-between">
           <h2 className="font-medium">Expenses</h2>

@@ -10,4 +10,5 @@
 - [ ] Deleted Expenses can be listed on request and restored, recording `ExpenseRestored`
 - [ ] Deleted Expenses don't count toward "a Group with Expenses" (currency lock, delete block)
 - [ ] People who aren't allowed to edit can't delete or restore
+- [ ] Deleting an Expense removes it from balances, and restoring brings it back (moved from ticket 07)
 - [ ] Service-level tests cover the above

@@ -15,7 +15,8 @@ import { createAuth, type AuthConfig } from "./auth.ts";
 import type { Db } from "./db/client.ts";
 import { person, user } from "./db/schema.ts";
 import type { EmailSender } from "./email.ts";
-import { noTransactionsYet, type Balances } from "./balances/index.ts";
+import type { Balances } from "./balances/index.ts";
+import { ledgerBalances } from "./balances/ledger.ts";
 import { NotFoundError, RuleError } from "./errors.ts";
 import { createGroupExpense, createNonGroupExpense, getExpense, getFriendPage, listGroupExpenses } from "./expenses/service.ts";
 import {
@@ -36,7 +37,8 @@ import { createMiddleware } from "hono/factory";
 
 export type AppDeps = { db: Db; email: EmailSender; auth: AuthConfig; balances?: Balances };
 
-export function createApp({ db, email, auth: authConfig, balances = noTransactionsYet }: AppDeps) {
+export function createApp({ db, email, auth: authConfig, balances: balancesOverride }: AppDeps) {
+  const balances = balancesOverride ?? ledgerBalances(db);
   const auth = createAuth({ db, email, config: authConfig });
 
   const groupsDeps = { db, balances, email, origin: authConfig.origin };
@@ -142,7 +144,7 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
     .post("/expenses", signedIn, zValidator("json", createNonGroupExpenseInput), async (c) =>
       c.json(await createNonGroupExpense({ db, email, origin: authConfig.origin }, c.var.me, c.req.valid("json"))),
     )
-    .get("/friends/:personId", signedIn, (c) => c.json(getFriendPage({ db }, c.var.me, c.req.param("personId"))))
+    .get("/friends/:personId", signedIn, (c) => c.json(getFriendPage({ db, balances }, c.var.me, c.req.param("personId"))))
     .get("/expenses/:id", signedIn, (c) => c.json(getExpense({ db }, c.var.me, c.req.param("id"))))
     .post("/groups/:id/members", signedIn, zValidator("json", addGroupMembersInput), async (c) => {
       await addGroupMembers(groupsDeps, c.var.me, c.req.param("id"), c.req.valid("json"));

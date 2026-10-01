@@ -16,6 +16,7 @@ import { NotFoundError, RuleError } from "../errors.ts";
 import { recordActivity } from "../activity/index.ts";
 import { memberIds, requireMembership } from "../groups/service.ts";
 import type { EmailSender } from "../email.ts";
+import type { Balances } from "../balances/index.ts";
 import { befriend, findOrInvitePerson, sendInvite } from "../people/index.ts";
 
 type Person = typeof person.$inferSelect;
@@ -241,7 +242,7 @@ function involves(db: Db, personId: string) {
 }
 
 /** A Friend and the non-group Expenses we're both on, newest bill date first. Friends only. */
-export function getFriendPage({ db }: ExpensesDeps, me: Person, friendId: string) {
+export function getFriendPage({ db, balances }: ExpensesDeps & { balances: Balances }, me: Person, friendId: string) {
   if (!friendIds(db, me.id).has(friendId)) throw new NotFoundError("Friend not found");
   const friend = db.select().from(person).where(eq(person.id, friendId)).get()!;
   const rows = db
@@ -256,6 +257,7 @@ export function getFriendPage({ db }: ExpensesDeps, me: Person, friendId: string
     name: friend.name,
     email: friend.email,
     invited: friend.status === "invited",
+    netBalances: balances.netBalances(me.id, friendId),
     expenses: summaries(db, me, rows.map((r) => ({ ...r.e, payerName: r.payerName }))),
   };
 }

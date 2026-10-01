@@ -276,6 +276,13 @@ export function getGroup({ db, balances }: GroupsDeps, me: Person, groupId: stri
     archived: g.archivedAt !== null,
     createdById: g.createdById,
     memberCount: members.length,
+    debts: (() => {
+      const order = new Map(members.map((m, i) => [m.personId, i]));
+      const pos = (id: string) => order.get(id) ?? Number.MAX_SAFE_INTEGER;
+      return balances
+        .groupDebts(groupId)
+        .sort((x, y) => pos(x.fromId) - pos(y.fromId) || pos(x.toId) - pos(y.toId) || x.currency.localeCompare(y.currency));
+    })(),
     members: members.map((m) => ({
       personId: m.personId,
       name: m.name,

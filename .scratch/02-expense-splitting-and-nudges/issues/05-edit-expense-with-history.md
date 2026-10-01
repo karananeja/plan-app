@@ -12,4 +12,5 @@
 - [ ] The Expense page shows its history, newest first
 - [ ] People who aren't allowed to edit get not found / rejected
 - [ ] The edit form reproduces what was originally typed (raw Split input)
+- [ ] Editing an Expense changes the balances accordingly (moved from ticket 07)
 - [ ] Service-level tests cover the above

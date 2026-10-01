@@ -342,3 +342,33 @@ Spec: [../specs/02-expense-splitting-and-nudges.md](../specs/02-expense-splittin
 
 ### Open / Next
 - [ ] Ticket 07 (Balances from Expenses) is unblocked (02 and 04 done). Tickets 05 and 06 are also unblocked.
+
+---
+
+## Entry 13 — 2026-10-01 — Ticket 07: Balances from Expenses (TDD)
+
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- "yes" to Ticket 07 next, then "yes" to the design (`ledgerBalances`, `groupDebts`, Friend page Net Balance) and 5 tests, with "edit/delete changes balances" moved to tickets 05 and 06.
+
+### Decided
+- **`ledgerBalances(db)`** (`balances/ledger.ts`) implements `Balances` from a Debts subquery: one row per non-payer Participant Share on non-deleted Expenses. Net Balance, Group Balance and Group Debts are all sums over it, grouped by currency; zero currencies are dropped and the order is stable. It's the default in `createApp`; tests can still inject `StubBalances`. Nothing is stored (ADR 0001).
+- **`groupDebts(groupId)`** nets each pair per currency and returns positive `from → to` amounts. The Group detail returns `debts`, sorted by member join order.
+- The Friend page includes `netBalances`.
+
+### Changed
+- `apps/api`: `balances/ledger.ts`; the `Balances` interface gains `groupDebts` and `GroupDebt`; `createApp` defaults to the ledger; Group detail has `debts`; Friend page has `netBalances`; `StubBalances.groupDebts`; `balances.test.ts` (6 tests).
+- `apps/web`: "Who owes whom" section on the Group page; Net Balance on the Friend page header. The Friends list and Group members already showed balances and now show real ones.
+- Tickets: "edit/delete changes balances" moved to tickets 05 and 06.
+
+### Verified
+- `pnpm test`: api 72/72, domain 30/30, web 4/4. Tests 1, 3 and 5 went red first.
+  - The currency test and the guard tests passed on first run (`GROUP BY` currency; the guards already read `Balances`).
+  - Each was confirmed against mutations: `groupBalances` reporting zero fails the Group and guards tests; `netBalances` reporting zero fails 4 tests, including the Friend-removal guard.
+  - One guard test was strengthened mid-way: its Friend-removal part was being blocked by a shared Group rather than by money, so it was split into a separate non-group Net Balance test.
+- Typecheck, lint and web build are clean.
+- End-to-end on a separate instance (ports 8788/5174, seeded scratch database), with every figure checked by hand: Asha's Net Balances are Ben +₹1,420, Chen +₹800, Divya −₹460; Goa Group Balances are +₹1,950 / −₹700 / 0 / −₹1,250 (sum 0); the Goa debts match the hand-netting; archiving Goa gives 400. The user's own dev servers were running before and after, untouched.
+
+### Open / Next
+- [ ] Ticket 08 (Nudge a Friend) is unblocked. Tickets 05 and 06 are also open.

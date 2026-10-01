@@ -2,6 +2,7 @@ import { formatMoney } from "@plan-app/domain";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { AddExpenseDialog } from "@/components/add-expense-dialog.tsx";
+import { BalanceText } from "@/components/balance-text.tsx";
 import { EffectText } from "@/components/effect-text.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { api } from "@/lib/api.ts";
@@ -43,6 +44,9 @@ export function FriendPage() {
             {displayName} {f.invited && <Badge variant="secondary" className="ml-1 align-middle">Invited</Badge>}
           </h1>
           {!f.invited && <p className="text-sm text-muted-foreground">{f.email}</p>}
+          <div className="mt-1">
+            <BalanceText balances={f.netBalances} />
+          </div>
         </div>
         {myPerson && (
           <AddExpenseDialog
