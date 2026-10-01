@@ -286,3 +286,38 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] Ticket 03 (Google sign-in) and Ticket 04 (add Friend & Friends list) are now unblocked.
+
+---
+
+## Entry 11 — 2026-10-01 — Ticket 04: add a Friend and the Friends list (TDD)
+
+**Session goal:** Implement Ticket 04 test-first (Ticket 03 follows in the same session).
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- User: "go ahead with both" (Tickets 04 and 03), then approved the seams ("yes"):
+  - Ticket 04 seam 1: the API app in-process (5 Friends tests).
+  - Ticket 04 seam 2: Activity, read through `activityFor(db, personId)`, plus an atomicity test through `recordActivity`.
+
+### Decided
+- **Friendship** is stored as two rows, one per direction, with a composite primary key, so re-adding is a no-op.
+- **Activity** has an `activity` table plus an `activity_audience` table (one row per person involved), so "Activity involving me" is a simple join. `recordActivity(tx, …)` only accepts a transaction handle. — **why:** ADR 0004 requires Activity to be written in the same transaction as the change.
+- **Balances interface** introduced with a `noTransactionsYet` implementation and injectable through `createApp`. **Net Balance is returned per currency** (`netBalances: [{ currency, amount }]`, empty = Settled Up). — **why:** currencies are never added together. This changed test 5 from the agreed `netBalance: 0` before implementation.
+- **`RuleError`** is mapped to HTTP 400 with the message. It's used for "You can't add yourself as a friend."
+- Emails are normalised (trimmed, lower-cased) before lookup. An Invited Person's name is their email until they join.
+- An invite email is sent only when the Invited Person is first created.
+
+### Changed
+- `apps/api`: `friendship`, `activity` and `activity_audience` tables (migrations 0001, 0002); `friends/service.ts`; `activity/index.ts`; `balances/index.ts`; `errors.ts`; a `signedIn` middleware exposing the caller's Person; `GET/POST /api/friends`; a `signedUp` test helper.
+- `packages/domain`: `addFriendInput`.
+- `apps/web`: Friends page (add by email, search, Invited badge, per-currency balance text) and nav link; shadcn badge.
+
+### Verified
+- `pnpm test`: api 16/16 (5 friends, 3 activity), domain 9/9. The dedupe test was confirmed to fail with email normalisation removed. The atomicity test passed first time, as expected: it pins the transaction guarantee rather than new code.
+- Typecheck, lint and web build are clean.
+- End-to-end through the dev proxy (scratch database): add an existing User, an unknown email and yourself (400); list; search; the invite link printed in the console.
+- **Found:** signing up with an invited email returns **500** (`UNIQUE constraint failed: person.email`). Recorded on Tickets 04 and 05. Ticket 05 must fix it.
+- **Not verified:** the Friends page in a real browser.
+
+### Open / Next
+- [ ] Ticket 03 (Google sign-in), then Ticket 05, which also fixes the invited sign-up 500.

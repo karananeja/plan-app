@@ -61,3 +61,12 @@ export function browser(app: TestApp) {
     patch: (path: string, body: unknown) => request("PATCH", path, body),
   };
 }
+
+/** Signs up a new User and returns their signed-in browser. */
+export async function signedUp(app: TestApp, name: string) {
+  const b = browser(app);
+  const email = `${name.toLowerCase()}@example.com`;
+  const res = await b.post("/api/auth/sign-up/email", { name, email, password: "a-good-password", currency: "INR" });
+  if (res.status !== 200) throw new Error(`sign-up failed for ${email}: ${res.status}`);
+  return Object.assign(b, { email, name });
+}

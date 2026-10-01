@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import { AppShell } from "@/components/app-shell.tsx";
 import { ForgotPasswordPage } from "@/pages/forgot-password.tsx";
+import { FriendsPage } from "@/pages/friends.tsx";
 import { HomePage } from "@/pages/home.tsx";
 import { ProfilePage } from "@/pages/profile.tsx";
 import { ResetPasswordPage } from "@/pages/reset-password.tsx";
@@ -17,6 +18,7 @@ export function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />
+          <Route path="/friends" element={<FriendsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
       </Routes>

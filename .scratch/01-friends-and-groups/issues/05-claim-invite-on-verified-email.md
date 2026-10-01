@@ -12,3 +12,7 @@
 - [ ] Signing up with the invited email without using the link also claims it once verified (matching is by verified email, not by link)
 - [ ] When Ticket 03 is done, Google sign-up with the invited email claims it immediately
 - [ ] Service-level tests cover claim-on-verify, no-claim-while-unverified, and no duplicate Person
+
+## Comments
+
+- 2026-10-01 (from Ticket 04): **Currently broken.** Signing up with an email that already has an Invited Person returns 500, because the sign-up hook tries to insert a second Person with the same email. This ticket must replace that: no new Person for an invited email, and the existing one is claimed when the email is verified. Until then, the User exists but has no Person, so decide what `/api/me` and signed-in routes show in that window. Add a test for exactly this sign-up.

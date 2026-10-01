@@ -8,12 +8,20 @@ This ticket introduces two seams later tickets reuse:
 
 **Blocked by:** 02 (Sign up and sign in with email + password, plus profile).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Adding an existing User's email creates a mutual Friendship and a `FriendAdded` Activity, with both people in the audience
-- [ ] Adding an unknown email creates an Invited Person, a mutual Friendship, `PersonInvited` and `FriendAdded` Activities, and prints an invite email with a join link
-- [ ] Adding an email that's already an Invited Person (from any User) reuses that Person; adding an existing Friend again is a no-op
-- [ ] You can't add yourself as a Friend
-- [ ] The Friends list shows each Friend's name/email, an Invited badge where relevant, and their Net Balance from the Balances interface; search filters by name or email
-- [ ] Activity rows are written in the same transaction as the change: a test shows that a failed change leaves no Activity
-- [ ] Service-level tests cover all of the above
+- [x] Adding an existing User's email creates a mutual Friendship and a `FriendAdded` Activity, with both people in the audience
+- [x] Adding an unknown email creates an Invited Person, a mutual Friendship, `PersonInvited` and `FriendAdded` Activities, and prints an invite email with a join link
+- [x] Adding an email that's already an Invited Person (from any User) reuses that Person; adding an existing Friend again is a no-op
+- [x] You can't add yourself as a Friend
+- [x] The Friends list shows each Friend's name/email, an Invited badge where relevant, and their Net Balance from the Balances interface; search filters by name or email
+- [x] Activity rows are written in the same transaction as the change: a test shows that a failed change leaves no Activity
+- [x] Service-level tests cover all of the above
+
+## Comments
+
+- 2026-10-01: Done.
+  - **Net Balance is a list per currency** (`netBalances: [{ currency, amount }]`, empty = Settled Up) rather than a single number, because balances in different currencies are never added together.
+  - An invite email is sent only when the Invited Person is first created. A second User adding the same email links to the same Person and sends nothing.
+  - `FriendAdded` is recorded only when a Friendship is new.
+  - **Known gap:** an invited email that signs up gets a 500 (`UNIQUE constraint failed: person.email`). Ticket 05 must fix this; see the note there.

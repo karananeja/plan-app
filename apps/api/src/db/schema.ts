@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index, primaryKey } from "drizzle-orm/sqlite-core";
 
 const timestamps = {
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
@@ -77,3 +77,41 @@ export const person = sqliteTable("person", {
   status: text("status", { enum: ["invited", "active"] }).notNull(),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 });
+
+/** A Friendship is mutual: it's stored as one row in each direction. */
+export const friendship = sqliteTable(
+  "friendship",
+  {
+    personId: text("person_id").notNull().references(() => person.id),
+    friendId: text("friend_id").notNull().references(() => person.id),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.personId, t.friendId] })],
+);
+
+/** A recorded, user-visible event (see GLOSSARY.md). Written in the same transaction as the change. */
+export const activity = sqliteTable(
+  "activity",
+  {
+    id: text("id").primaryKey(),
+    type: text("type").notNull(),
+    actorId: text("actor_id").notNull().references(() => person.id),
+    subjectType: text("subject_type").notNull(),
+    subjectId: text("subject_id").notNull(),
+    groupId: text("group_id"),
+    /** Event-specific details, e.g. what changed in an edit. JSON. */
+    data: text("data", { mode: "json" }).$type<Record<string, unknown>>(),
+    occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [index("activity_occurred_at_idx").on(t.occurredAt)],
+);
+
+/** The people an Activity involves. */
+export const activityAudience = sqliteTable(
+  "activity_audience",
+  {
+    activityId: text("activity_id").notNull().references(() => activity.id),
+    personId: text("person_id").notNull().references(() => person.id),
+  },
+  (t) => [primaryKey({ columns: [t.activityId, t.personId] }), index("activity_audience_person_idx").on(t.personId)],
+);
