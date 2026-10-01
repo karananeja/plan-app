@@ -25,12 +25,12 @@ Users build a friend list by inviting people by email, whether or not those peop
 10. As a User, I want to search my Friends list, so that I can find someone quickly.
 11. As a User, I want to remove a Friend once we're Settled Up and share no active Group, so that my list stays tidy.
 12. As a User, I want to be prevented from removing a Friend while we still owe each other money or share a non-archived Group, so that debts aren't silently lost and the Friendship isn't immediately recreated.
-13. As a User, I want to create a Group with a name, optional image and optional type (trip, home, couple, other), so that I can organise related Expenses.
+13. As a User, I want to create a Group with a name, an emoji and colour (an uploaded image is deferred from v1) and optional type (trip, home, couple, other), so that I can organise related Expenses.
 14. As a User, I want to add Friends to a Group when I create it, so that I can start splitting straight away.
 15. As a Group Member, I want to add more people to an existing Group, including people who aren't yet my Friends, so that latecomers can join.
 16. As a person added to a Group, I want to automatically become Friends with the other Group Members, so that I can see shared balances.
 17. As a Group Member, I want to see all Group Members and each one's Group Balance, so that I know who's up and who's down.
-18. As a Group Member, I want to rename the Group or change its image, so that it stays relevant.
+18. As a Group Member, I want to rename the Group or change its emoji and colour, so that it stays relevant.
 19. As a Group Member, I want to leave a Group when my Group Balance is zero, so that I stop getting its updates.
 20. As a Group Member, I want to be blocked from leaving a Group while I have a non-zero Group Balance, so that others aren't left with unrecoverable debts.
 21. As a Group Member, I want to remove another member whose Group Balance is zero, so that the Group reflects who's actually involved.
@@ -53,7 +53,7 @@ Users build a friend list by inviting people by email, whether or not those peop
 - **Auto-friending** happens in two cases: everyone in the same Group, and everyone on the same non-group Expense (Payer and Participants), all become Friends with each other.
 - **Friendship is mutual and automatic**: adding someone creates the link both ways with no accept step in v1. Being in the same Group creates Friendships between all members.
 - **Group permissions are flat in v1**: any Group Member can add members, rename, and archive. Only the creator can delete, and only while the Group has no Expenses.
-- **Leaving or removal requires a zero Group Balance.** The balance check goes through the Balances module (Spec 03) interface, not a direct ledger query.
+- **Leaving or removal requires a zero Group Balance.** The balance check goes through the Balances module (Spec 03) interface, not a direct ledger query. Until Spec 03 is built, that interface's implementation reports zero (there are no Transactions yet), and guard tests use a stub.
 - **Group currency** is set at creation and can't be changed once the Group has Expenses. It defaults to the creator's **profile currency**, which is prefilled from their locale (e.g. INR) and editable in their profile. Non-group Expenses default to the profile currency too.
 - **Archived Groups** are read-only. Adding an Expense to one un-archives it automatically.
 - **Visibility**:
@@ -89,3 +89,4 @@ Users build a friend list by inviting people by email, whether or not those peop
 
 - Archive vs delete: deleting destroys history and is only allowed for empty Groups. Archive is the normal end-of-life.
 - Spec 02 depends on Group membership: Participants of a Group Expense must be Group Members.
+- Tickets: [`.scratch/01-friends-and-groups/`](../../.scratch/01-friends-and-groups/README.md). Criteria that need Expenses were moved to Spec 02 (see its "Carried over from Spec 01").

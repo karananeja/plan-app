@@ -112,5 +112,15 @@ In every case, A, B and C each owe me their Share. My own Share is what I consum
 
 ## Further Notes
 
+### Carried over from Spec 01
+
+These Spec 01 criteria need Expenses, so they're built and tested here:
+- An Invited Person's Expenses are still theirs after they claim the invite (same Person, no migration).
+- Adding an Expense to an archived Group un-archives it.
+- A Group's currency can't be changed once it has Expenses, and a Group with Expenses can't be deleted.
+- The seed script adds sample Expenses (group and non-group) among the seeded Users.
+
+### Other notes
+
 - "Ask friends to pay" in the original requirement is met by Debts appearing in their balances plus Nudges. No separate "request" object exists.
 - Storing both `input` and `shareMinor` keeps old Expenses stable and lets the edit UI reproduce what the user typed.

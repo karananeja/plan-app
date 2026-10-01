@@ -178,3 +178,29 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] Approve the Spec 01 ticket breakdown, then publish to `.scratch/01-friends-and-groups/issues/`.
+
+---
+
+## Entry 8 — 2026-10-01 — Spec broken into tickets
+
+**Session goal:** Publish Spec 01 as tracer-bullet tickets (`/to-tickets`).
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- `/to-tickets docs/specs/01-friends-and-groups.md`. The user approved the 10-ticket breakdown ("ok").
+
+### Decided
+- Ticket 01 is a workspace scaffold / walking skeleton, because the repo has no code yet.
+- A **Balances interface** that reports zero is introduced in Ticket 04. — **why:** Spec 01's guards depend on balances (Spec 03), and with no Transactions zero is the true answer. Spec 03 replaces it and adds the non-zero tests.
+- Ticket 04 also introduces the **Activity recording** seam (written in the same transaction as the change).
+- Expense-dependent criteria moved to Spec 02 ("Carried over from Spec 01"). — **why:** they can't be verified until Expenses exist.
+- Group image becomes **emoji + colour** in v1. — **why:** uploads need file storage, the same reason receipt photos were cut.
+
+### Changed
+- `.scratch/01-friends-and-groups/README.md` (ticket graph) and `issues/01`–`10`.
+- `docs/specs/01-friends-and-groups.md`: stories 13 and 18, the Balances note, a ticket link.
+- `docs/specs/02-expense-splitting-and-nudges.md`: "Carried over from Spec 01".
+- `docs/specs/03-balances-and-settlements.md`: a note that it replaces the zero-reporting Balances implementation.
+
+### Open / Next
+- [ ] Implement Ticket 01 (workspace scaffold), using `/tdd`.
