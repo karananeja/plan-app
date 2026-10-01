@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router";
 import { FormError } from "@/components/auth-card.tsx";
 import { BalanceText } from "@/components/balance-text.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
@@ -74,12 +75,12 @@ export function FriendsPage() {
               <span className="flex size-9 items-center justify-center rounded-full bg-muted text-xs font-medium">
                 {initials(f.invited ? f.email : f.name)}
               </span>
-              <div className="min-w-0 flex-1">
+              <Link to={`/friends/${f.personId}`} className="min-w-0 flex-1 hover:underline">
                 <p className="truncate font-medium">
                   {f.name} {f.invited && <Badge variant="secondary" className="ml-1">Invited</Badge>}
                 </p>
                 {!f.invited && <p className="truncate text-sm text-muted-foreground">{f.email}</p>}
-              </div>
+              </Link>
               <BalanceText balances={f.netBalances} />
               <Button
                 variant="ghost"

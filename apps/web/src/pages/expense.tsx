@@ -29,7 +29,11 @@ export function ExpensePage() {
 
   return (
     <div className="grid max-w-xl gap-4">
-      {e.groupId && <Link to={`/groups/${e.groupId}`} className="text-sm text-muted-foreground underline">← Back to group</Link>}
+      {e.groupId ? (
+        <Link to={`/groups/${e.groupId}`} className="text-sm text-muted-foreground underline">← Back to group</Link>
+      ) : (
+        <Link to="/friends" className="text-sm text-muted-foreground underline">← Friends</Link>
+      )}
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>

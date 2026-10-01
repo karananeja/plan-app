@@ -53,4 +53,19 @@ describe("seed", () => {
     expect(expenses.length).toBeGreaterThanOrEqual(2);
     expect(new Set(expenses.map((e) => e.description)).size).toBe(expenses.length);
   });
+
+  it("adds non-group Expenses between demo Users, without duplicating them on re-run", async () => {
+    const { app, db } = createTestApp();
+    await seed(db, TEST_AUTH);
+    await seed(db, TEST_AUTH);
+
+    const b = browser(app);
+    await b.post("/api/auth/sign-in/email", { email: "asha@example.com", password: DEMO_PASSWORD });
+    const { friends } = (await (await b.get("/api/friends")).json()) as { friends: { personId: string; email: string }[] };
+    const divya = friends.find((f) => f.email === "divya@example.com")!;
+    const page = (await (await b.get(`/api/friends/${divya.personId}`)).json()) as { expenses: { description: string }[] };
+
+    expect(page.expenses.length).toBeGreaterThanOrEqual(1);
+    expect(new Set(page.expenses.map((e) => e.description)).size).toBe(page.expenses.length);
+  });
 });

@@ -14,7 +14,7 @@ async function openDialog() {
   const user = userEvent.setup();
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <AddExpenseDialog groupId="g1" currency="INR" members={members} meId="me" />
+      <AddExpenseDialog target={{ groupId: "g1" }} currency="INR" members={members} meId="me" />
     </QueryClientProvider>,
   );
   await user.click(screen.getByRole("button", { name: "Add expense" }));

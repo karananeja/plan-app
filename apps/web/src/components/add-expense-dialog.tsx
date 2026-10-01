@@ -30,7 +30,20 @@ const METHODS: { method: SplitMethod; label: string; hint: string; suffix?: stri
 
 const selectClass = "h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs";
 
-export function AddExpenseDialog({ groupId, currency, members, meId }: { groupId: string; currency: string; members: Member[]; meId: string }) {
+/** Where the Expense goes: into a Group, or between Friends (non-group). */
+export type ExpenseTarget = { groupId: string } | { friends: true };
+
+export function AddExpenseDialog({
+  target,
+  currency,
+  members,
+  meId,
+}: {
+  target: ExpenseTarget;
+  currency: string;
+  members: Member[];
+  meId: string;
+}) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
@@ -72,7 +85,10 @@ export function AddExpenseDialog({ groupId, currency, members, meId }: { groupId
       description: string; amount: string; date: string; category: ExpenseCategory; note?: string; payerId: string;
       method: SplitMethod; participants: { personId: string; value?: string }[];
     }) => {
-      const res = await api.groups[":id"].expenses.$post({ param: { id: groupId }, json });
+      const res =
+        "groupId" in target
+          ? await api.groups[":id"].expenses.$post({ param: { id: target.groupId }, json })
+          : await api.expenses.$post({ json: { ...json, currency } });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error ?? "Please check the expense details.");
@@ -80,6 +96,7 @@ export function AddExpenseDialog({ groupId, currency, members, meId }: { groupId
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["groups"] });
+      await queryClient.invalidateQueries({ queryKey: ["friends"] });
       setOpen(false);
       setAmount("");
       setValues({});

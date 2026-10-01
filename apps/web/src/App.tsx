@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { AppShell } from "@/components/app-shell.tsx";
 import { ExpensePage } from "@/pages/expense.tsx";
 import { ForgotPasswordPage } from "@/pages/forgot-password.tsx";
+import { FriendPage } from "@/pages/friend.tsx";
 import { FriendsPage } from "@/pages/friends.tsx";
 import { GroupPage } from "@/pages/group.tsx";
 import { GroupsPage } from "@/pages/groups.tsx";
@@ -25,6 +26,7 @@ export function App() {
           <Route path="/groups/:id" element={<GroupPage />} />
           <Route path="/expenses/:id" element={<ExpensePage />} />
           <Route path="/friends" element={<FriendsPage />} />
+          <Route path="/friends/:personId" element={<FriendPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
       </Routes>

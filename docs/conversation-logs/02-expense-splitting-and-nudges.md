@@ -312,3 +312,33 @@ Spec: [../specs/02-expense-splitting-and-nudges.md](../specs/02-expense-splittin
 
 ### Open / Next
 - [ ] Tickets 04, 05 and 06 are unblocked.
+
+---
+
+## Entry 12 — 2026-10-01 — Ticket 04: non-group Expenses and the Friend page (TDD)
+
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- "yes" to Ticket 04 next, then "yes" to the API shape, the rule "you must be on a non-group Expense", and 6 tests.
+
+### Decided
+- **Inputs**: `createExpenseInput` (Group; Participants by Person id) and `createNonGroupExpenseInput` (Participants by `personId` or `email`, optional `currency`) share one set of base fields.
+- **One write path**: `recordExpense(tx, me, { groupId, currency, audience }, details)` validates the Split, writes the Expense and its Participants, and records `ExpenseCreated`. Group creation wraps it with the membership check and un-archiving; non-group creation wraps it with the Friends check, invites, auto-friending and the "I must be on it" rule.
+- **Non-group rules**: the Payer and any `personId` must be me or my Friend (400); emails are found or invited (the invite is sent after commit). Everyone on the Expense is friended with everyone else (`befriend`, so `FriendAdded` only for new pairs). The creator must be the Payer or a Participant (400). The currency defaults to the profile currency.
+- **Visibility**: a non-group Expense is visible only to its Payer and Participants (`isInvolved`). The Friend page (`GET /api/friends/:personId`, Friends only) lists non-group Expenses both people are on.
+
+### Changed
+- `packages/domain`: base `expenseFields`, `createNonGroupExpenseInput`.
+- `apps/api`: `expenses/service.ts` (`recordExpense`, `createNonGroupExpense`, `getFriendPage`, visibility); routes; seed (two non-group demo Expenses between Asha and Divya); `non-group-expenses.test.ts` (5) and a seed test; test helpers.
+- `apps/web`: Friend page with shared non-group Expenses and "Add expense"; Friends list rows link to it; `AddExpenseDialog` takes a `target` (Group or Friends); the Expense page's back link handles non-group Expenses.
+
+### Verified
+- `pnpm test`: api 66/66, domain 30/30, web 4/4. Tests 1–3, 5 and 6 went red first. The visibility test (4) passed on first run because visibility came with step 1; it was confirmed to fail with the involvement check removed.
+- Typecheck, lint and web build are clean.
+- End-to-end on a **separate instance** (ports 8788/5174, scratch database): Asha's Friend page for Divya shows the seeded Expenses (Coffee: lent ₹240; Concert: owe ₹1,500); a new Expense with Divya and a new email gives Divya 200 and Chen 404, and the invite link is printed.
+- **Incident and process change**: an attempt aborted on busy ports. Those were the **user's own `pnpm dev`** (no scratch `DATABASE_PATH`, started after my last run), and they were left alone. This showed the earlier cleanup (`pkill -f "<repo>/apps/"`) could have killed the user's servers. The end-to-end script now uses its own ports and stops only its own process tree. The user's servers were confirmed running before and after. Memory updated.
+- **Not verified:** the pages in a real browser.
+
+### Open / Next
+- [ ] Ticket 07 (Balances from Expenses) is unblocked (02 and 04 done). Tickets 05 and 06 are also unblocked.

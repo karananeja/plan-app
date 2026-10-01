@@ -170,7 +170,7 @@ export function GroupPage() {
       <section className="grid gap-2">
         <div className="flex items-center justify-between">
           <h2 className="font-medium">Expenses</h2>
-          {me.data?.person && <AddExpenseDialog groupId={g.id} currency={g.currency} members={g.members} meId={me.data.person.id} />}
+          {me.data?.person && <AddExpenseDialog target={{ groupId: g.id }} currency={g.currency} members={g.members} meId={me.data.person.id} />}
         </div>
         {expenses.data?.length === 0 && <p className="text-sm text-muted-foreground">No expenses yet.</p>}
         <ul className="divide-y rounded-md border">

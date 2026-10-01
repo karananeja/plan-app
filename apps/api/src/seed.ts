@@ -1,9 +1,9 @@
-import { createExpenseInput, createGroupInput } from "@plan-app/domain";
-import { and, eq } from "drizzle-orm";
+import { createExpenseInput, createGroupInput, createNonGroupExpenseInput } from "@plan-app/domain";
+import { and, eq, isNull } from "drizzle-orm";
 import { createAuth, type AuthConfig } from "./auth.ts";
 import type { Db } from "./db/client.ts";
 import { expense, group, person, user } from "./db/schema.ts";
-import { createGroupExpense } from "./expenses/service.ts";
+import { createGroupExpense, createNonGroupExpense } from "./expenses/service.ts";
 import { createGroup } from "./groups/service.ts";
 import { noTransactionsYet } from "./balances/index.ts";
 import type { EmailSender } from "./email.ts";
@@ -23,6 +23,12 @@ const DEMO_GROUP_EXPENSES = [
   ["Goa Trip", "Scooter rental", "1800", "2026-09-21", "travel", "ben", ["asha", "ben", "chen", "divya"]],
   ["Goa Trip", "Parasailing", "2500", "2026-09-22", "entertainment", "chen", ["ben", "chen"]],
   ["Flat 4B", "Electricity bill", "2140", "2026-09-05", "utilities", "asha", ["asha", "ben"]],
+] as const;
+
+/** Demo non-group Expenses: [description, amount, date, category, payer, participants]. */
+const DEMO_FRIEND_EXPENSES = [
+  ["Concert tickets", "3000", "2026-09-12", "entertainment", "divya", ["asha", "divya"]],
+  ["Coffee", "480", "2026-09-25", "food", "asha", ["asha", "divya"]],
 ] as const;
 
 /** Demo Groups, created by Asha. */
@@ -64,6 +70,21 @@ export async function seed(db: Db, config: AuthConfig) {
       g.id,
       createExpenseInput.parse({
         description, amount, date, category, method: "equal",
+        payerId: payerPerson.id,
+        participants: participants.map((n) => ({ personId: personByName(n).id })),
+      }),
+    );
+  }
+
+  for (const [description, amount, date, category, payer, participants] of DEMO_FRIEND_EXPENSES) {
+    const exists = db.select().from(expense).where(and(isNull(expense.groupId), eq(expense.description, description))).get();
+    if (exists) continue;
+    const payerPerson = personByName(payer);
+    await createNonGroupExpense(
+      { db, email: silent, origin: config.origin },
+      payerPerson,
+      createNonGroupExpenseInput.parse({
+        description, amount, date, category, method: "equal", currency: "INR",
         payerId: payerPerson.id,
         participants: participants.map((n) => ({ personId: personByName(n).id })),
       }),

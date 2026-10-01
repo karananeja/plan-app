@@ -25,3 +25,12 @@ export const addGroupExpense = (b: Browser, groupId: string, body: { participant
 export const groupExpenses = async (b: Browser, groupId: string) =>
   (await json<{ expenses: ExpenseSummary[] }>(b.get(`/api/groups/${groupId}/expenses`))).expenses;
 export const getExpense = (b: Browser, id: string) => json<ExpenseDetail>(b.get(`/api/expenses/${id}`));
+
+export const addExpense = (b: Browser, body: Record<string, unknown>) =>
+  b.post("/api/expenses", { date: "2026-09-28", category: "food", method: "equal", ...body });
+
+export type FriendPage = {
+  personId: string; name: string; email: string; invited: boolean;
+  expenses: ExpenseSummary[];
+};
+export const friendPage = (b: Browser, personId: string) => json<FriendPage>(b.get(`/api/friends/${personId}`));
