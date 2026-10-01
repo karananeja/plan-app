@@ -204,3 +204,42 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] Implement Ticket 01 (workspace scaffold), using `/tdd`.
+
+---
+
+## Entry 9 — 2026-10-01 — Ticket 01: workspace scaffold (TDD)
+
+**Session goal:** Implement `.scratch/01-friends-and-groups/issues/01-workspace-scaffold.md` test-first (`/tdd`).
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- User approved implementing Ticket 01 with `/tdd` and the three proposed test seams ("ok").
+
+### Decided
+- **Test seams for this ticket**:
+  1. The Hono app called in-process (`GET /api/health` with a fresh in-memory database).
+  2. The domain package's public exports. Money conversion is the first real domain function: `toMinorUnits` and `formatMoney`, working on strings with no floating point.
+  3. No web test. Verified by running.
+- **TypeScript pinned to 6.0.x.** — **why:** TypeScript 7.0.2 is `latest`, but typescript-eslint supports `<6.1.0`.
+- **No placeholder migration.** The Drizzle migration journal starts empty. — **why:** an empty custom migration fails ("no statements"), and a dummy table would be invented schema. Ticket 02 adds the first real table.
+- **The API listens on 8787 by default.** — **why:** port 3000 was taken by another local app (an "FMS" dev server).
+- **Vite loads the repo-root `.env`** with `loadEnv`, so the API and the web proxy agree on ports.
+- shadcn's CLI (Vite template, Radix base, new-york style) now installs `cn`, shadcn's own package (repo `shadcn-ui/cn`), instead of clsx + tailwind-merge. Checked and kept.
+
+### Changed
+- Workspace: `pnpm-workspace.yaml` (with build scripts allowed for better-sqlite3 and esbuild), root `package.json` scripts, `tsconfig.base.json`, `eslint.config.js`, `.env.example`, `.gitignore` (`data/`), `README.md`.
+- `packages/domain`: money module and its tests.
+- `apps/api`: Hono app with `GET /api/health`, server entry, config, Drizzle client/migrator, migrate CLI, test-database helper, health test.
+- `apps/web`: Vite + React + Tailwind v4 + shadcn (Button), React Query, typed Hono RPC client, health page.
+
+### Verified
+- `pnpm test`: domain 2/2, api 1/1, web has no tests (by design).
+- `pnpm typecheck` and `pnpm lint` are clean. `pnpm --filter @plan-app/web build` succeeds.
+- `pnpm db:migrate` creates `data/plan-app.sqlite`.
+- `pnpm dev`: `GET /api/health` returns `{"status":"ok","db":"ok"}` both directly on :8787 and through the Vite proxy on :5173.
+- Both apps resolve `@plan-app/domain` at runtime.
+- **Not verified:** the rendered page in a real browser. Only the proxy fetch and the build were checked.
+- Incident: an early cleanup ran `pkill -f vite`, which matches any Vite process on the machine. The user's other app on :3000 was confirmed still running; any other Vite dev server could have been stopped. Since then, processes are only stopped by the PIDs we started.
+
+### Open / Next
+- [ ] Ticket 02: email + password sign-in and profile (first migration: Person).
