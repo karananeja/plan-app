@@ -1,11 +1,11 @@
-import { DEFAULT_GROUP_EMOJI, type CreateGroupInput } from "@plan-app/domain";
+import { DEFAULT_GROUP_EMOJI, type AddGroupMembersInput, type CreateGroupInput } from "@plan-app/domain";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { Balances } from "../balances/index.ts";
-import type { Db } from "../db/client.ts";
+import type { Db, Tx } from "../db/client.ts";
 import { activity, group, groupMember, person, user } from "../db/schema.ts";
 import type { EmailSender } from "../email.ts";
-import { NotFoundError } from "../errors.ts";
+import { NotFoundError, RuleError } from "../errors.ts";
 import { recordActivity } from "../activity/index.ts";
 import { befriend, findOrInvitePerson, normalizeEmail, sendInvite } from "../people/index.ts";
 
@@ -38,21 +38,71 @@ export async function createGroup({ db, email: emailSender, origin }: GroupsDeps
         createdAt: now,
       })
       .run();
-    const found = emails.map((e) => findOrInvitePerson(tx, me, e));
-    const members = [me, ...found.map((f) => f.person)];
-    tx.insert(groupMember)
-      .values(members.map((m, i) => ({ groupId: id, personId: m.id, joinedAt: new Date(now.getTime() + i) })))
-      .run();
-    const audience = members.map((m) => m.id);
+    tx.insert(groupMember).values({ groupId: id, personId: me.id, joinedAt: now }).run();
+    const found = addMembers(tx, me, id, emails);
+    const audience = [me.id, ...found.map((f) => f.person.id)];
     recordActivity(tx, { type: "GroupCreated", actorId: me.id, subject: { type: "group", id }, groupId: id, audience });
-    for (const m of members.slice(1)) {
-      recordActivity(tx, { type: "GroupMemberAdded", actorId: me.id, subject: { type: "person", id: m.id }, groupId: id, audience });
-    }
-    for (const [i, a] of members.entries()) for (const b of members.slice(i + 1)) befriend(tx, me, a.id, b.id);
     return found.filter((f) => f.invited).map((f) => f.person.email);
   });
   for (const e of invitedEmails) await sendInvite(emailSender, origin, me, e);
   return { id };
+}
+
+/**
+ * Adds people (by email) to a Group: existing Persons or new Invited Persons. Each new member
+ * is recorded as GroupMemberAdded for all members and friended with every other member.
+ * Returns what was found or invited for each email; already-members are skipped.
+ */
+function addMembers(tx: Tx, me: Person, groupId: string, emails: string[]) {
+  const existing = tx
+    .select({ id: groupMember.personId })
+    .from(groupMember)
+    .where(eq(groupMember.groupId, groupId))
+    .orderBy(groupMember.joinedAt)
+    .all();
+  const memberIds = new Set(existing.map((m) => m.id));
+  const found = emails.map((e) => findOrInvitePerson(tx, me, e)).filter((f) => !memberIds.has(f.person.id));
+  const start = Date.now();
+  for (const [i, f] of found.entries()) {
+    tx.insert(groupMember).values({ groupId, personId: f.person.id, joinedAt: new Date(start + i + 1) }).onConflictDoNothing().run();
+    memberIds.add(f.person.id);
+  }
+  const audience = [...memberIds];
+  for (const f of found) {
+    recordActivity(tx, { type: "GroupMemberAdded", actorId: me.id, subject: { type: "person", id: f.person.id }, groupId, audience });
+  }
+  // Each new member is friended with everyone who joined before them, so FriendAdded is about the newcomer.
+  for (const [i, f] of found.entries()) {
+    const before = [...existing.map((m) => m.id), ...found.slice(0, i).map((x) => x.person.id)];
+    for (const other of before) befriend(tx, me, other, f.person.id);
+  }
+  return found;
+}
+
+/** The Group, if I'm a member; otherwise NotFoundError (non-members can't tell it exists). */
+function requireMembership(db: Db | Tx, me: Person, groupId: string) {
+  const row = db
+    .select({ g: group })
+    .from(groupMember)
+    .innerJoin(group, eq(group.id, groupMember.groupId))
+    .where(and(eq(groupMember.groupId, groupId), eq(groupMember.personId, me.id)))
+    .get();
+  if (!row) throw new NotFoundError("Group not found");
+  return row.g;
+}
+
+function requireActive(g: typeof group.$inferSelect) {
+  if (g.archivedAt) throw new RuleError("This group is archived. Un-archive it to make changes.");
+}
+
+/** Any member adds more people to an active Group. */
+export async function addGroupMembers({ db, email: emailSender, origin }: GroupsDeps, me: Person, groupId: string, input: AddGroupMembersInput) {
+  const emails = [...new Set(input.emails.map(normalizeEmail))];
+  const invited = db.transaction((tx) => {
+    requireActive(requireMembership(tx, me, groupId));
+    return addMembers(tx, me, groupId, emails).filter((f) => f.invited).map((f) => f.person.email);
+  });
+  for (const e of invited) await sendInvite(emailSender, origin, me, e);
 }
 
 const memberCount = sql<number>`(select count(*) from ${groupMember} gm where gm.group_id = ${group.id})`;

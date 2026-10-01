@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { addFriendInput, createGroupInput, updateProfileInput } from "@plan-app/domain";
+import { addFriendInput, addGroupMembersInput, createGroupInput, updateProfileInput } from "@plan-app/domain";
 import { eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { createAuth, type AuthConfig } from "./auth.ts";
@@ -8,7 +8,7 @@ import { person, user } from "./db/schema.ts";
 import type { EmailSender } from "./email.ts";
 import { noTransactionsYet, type Balances } from "./balances/index.ts";
 import { NotFoundError, RuleError } from "./errors.ts";
-import { createGroup, getGroup, listGroups } from "./groups/service.ts";
+import { addGroupMembers, createGroup, getGroup, listGroups } from "./groups/service.ts";
 import { addFriend, listFriends } from "./friends/service.ts";
 import { invitedPersonFor } from "./people/index.ts";
 import { createMiddleware } from "hono/factory";
@@ -81,7 +81,11 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
     .post("/groups", signedIn, zValidator("json", createGroupInput), async (c) =>
       c.json(await createGroup(groupsDeps, c.var.me, c.req.valid("json"))),
     )
-    .get("/groups/:id", signedIn, (c) => c.json(getGroup(groupsDeps, c.var.me, c.req.param("id"))));
+    .get("/groups/:id", signedIn, (c) => c.json(getGroup(groupsDeps, c.var.me, c.req.param("id"))))
+    .post("/groups/:id/members", signedIn, zValidator("json", addGroupMembersInput), async (c) => {
+      await addGroupMembers(groupsDeps, c.var.me, c.req.param("id"), c.req.valid("json"));
+      return c.json({ ok: true } as const);
+    });
 }
 
 /** Route types for the web app's typed RPC client. */

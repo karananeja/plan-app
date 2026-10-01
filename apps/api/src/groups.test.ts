@@ -1,21 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { activityFor, recordActivity } from "./activity/index.ts";
 import { createTestApp, signedUp } from "./test/app.ts";
-
-type Browser = Awaited<ReturnType<typeof signedUp>>;
-type GroupSummary = { id: string; name: string; type: string; emoji: string; colour: string; currency: string; memberCount: number };
-type GroupDetail = GroupSummary & {
-  members: { personId: string; name: string; email: string; invited: boolean; groupBalances: { currency: string; amount: number }[] }[];
-};
-
-async function json<T>(res: Promise<Response>, status = 200): Promise<T> {
-  const r = await res;
-  expect(r.status).toBe(status);
-  return (await r.json()) as T;
-}
-const createGroup = (b: Browser, body: object) => json<{ id: string }>(b.post("/api/groups", body));
-const listGroups = async (b: Browser) => (await json<{ groups: GroupSummary[] }>(b.get("/api/groups"))).groups;
-const getGroup = (b: Browser, id: string) => json<GroupDetail>(b.get(`/api/groups/${id}`));
+import { createGroup, getGroup, json, listGroups, personId, type Browser } from "./test/groups.ts";
 
 describe("groups", () => {
   afterEach(() => vi.useRealTimers());
@@ -111,7 +97,7 @@ describe("groups", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { app, db } = createTestApp();
     const asha = await signedUp(app, "Asha");
-    const ashaId = (await getGroupsMe(asha)).person.id;
+    const ashaId = await personId(asha);
 
     vi.setSystemTime(new Date("2026-10-01T10:00:00Z"));
     const older = await createGroup(asha, { name: "Older" });
@@ -127,4 +113,3 @@ describe("groups", () => {
   });
 });
 
-const getGroupsMe = (b: Browser) => json<{ person: { id: string } }>(b.get("/api/me"));

@@ -1,13 +1,38 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import { BalanceText } from "@/components/balance-text.tsx";
 import { GroupIcon } from "@/components/group-icon.tsx";
+import { FormError } from "@/components/auth-card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import { Input } from "@/components/ui/input.tsx";
 import { api } from "@/lib/api.ts";
 import { initials } from "@/lib/me.ts";
 
 export function GroupPage() {
   const { id = "" } = useParams();
+  const queryClient = useQueryClient();
+  const addMembers = useMutation({
+    mutationFn: async (emails: string[]) => {
+      const res = await api.groups[":id"].members.$post({ param: { id }, json: { emails } });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Please enter valid email addresses.");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+    },
+  });
+
+  function onAdd(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const emails = String(new FormData(form).get("emails")).split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (emails.length) addMembers.mutate(emails, { onSuccess: () => form.reset() });
+  }
   const group = useQuery({
     queryKey: ["groups", id],
     queryFn: async () => {
@@ -54,6 +79,13 @@ export function GroupPage() {
             </li>
           ))}
         </ul>
+        {!g.archived && (
+          <form onSubmit={onAdd} className="mt-2 flex gap-2">
+            <Input name="emails" placeholder="Add people by email (comma separated)" aria-label="Add people by email" />
+            <Button type="submit" variant="outline" disabled={addMembers.isPending}>Add</Button>
+          </form>
+        )}
+        <FormError message={addMembers.error?.message ?? null} />
       </section>
       <p className="text-sm text-muted-foreground">Expenses are coming next.</p>
     </div>

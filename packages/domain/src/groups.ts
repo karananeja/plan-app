@@ -21,3 +21,8 @@ export const createGroupInput = z.object({
   memberEmails: z.array(z.string().trim().email()).max(50).default([]),
 });
 export type CreateGroupInput = z.infer<typeof createGroupInput>;
+
+export const addGroupMembersInput = z.object({
+  emails: z.array(z.string().trim().email()).min(1).max(50),
+});
+export type AddGroupMembersInput = z.infer<typeof addGroupMembersInput>;

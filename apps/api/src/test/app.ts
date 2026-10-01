@@ -1,4 +1,5 @@
 import { createApp } from "../app.ts";
+import type { Balances, CurrencyAmount } from "../balances/index.ts";
 import type { Email, EmailSender } from "../email.ts";
 import { createTestDb } from "./db.ts";
 
@@ -21,13 +22,14 @@ export const TEST_GOOGLE = { clientId: "test-client-id.apps.googleusercontent.co
 export const TEST_AUTH = { secret: "test-secret-at-least-32-characters-long", origin: TEST_ORIGIN };
 
 /** A fresh app on a fresh in-memory database, with a fake email sender. */
-export function createTestApp(options: { google?: boolean } = {}) {
+export function createTestApp(options: { google?: boolean; balances?: Balances } = {}) {
   const db = createTestDb();
   const email = new FakeEmailSender();
   const app = createApp({
     db,
     email,
     auth: options.google ? { ...TEST_AUTH, google: TEST_GOOGLE } : TEST_AUTH,
+    balances: options.balances,
   });
   return { app, db, email };
 }
@@ -70,4 +72,25 @@ export async function signedUp(app: TestApp, name: string) {
   const res = await b.post("/api/auth/sign-up/email", { name, email, password: "a-good-password", currency: "INR" });
   if (res.status !== 200) throw new Error(`sign-up failed for ${email}: ${res.status}`);
   return Object.assign(b, { email, name });
+}
+
+/**
+ * A Balances stand-in for guards that depend on money owed (Spec 03 supplies the real one).
+ * Everyone is Settled Up until a test says otherwise.
+ */
+export class StubBalances implements Balances {
+  private net = new Map<string, CurrencyAmount[]>();
+  private group = new Map<string, CurrencyAmount[]>();
+  netBalances(me: string, other: string) {
+    return this.net.get(`${me}|${other}`) ?? this.net.get(`${other}|${me}`)?.map((b) => ({ ...b, amount: -b.amount })) ?? [];
+  }
+  groupBalances(groupId: string, personId: string) {
+    return this.group.get(`${groupId}|${personId}`) ?? [];
+  }
+  setNet(me: string, other: string, amounts: CurrencyAmount[]) {
+    this.net.set(`${me}|${other}`, amounts);
+  }
+  setGroup(groupId: string, personId: string, amounts: CurrencyAmount[]) {
+    this.group.set(`${groupId}|${personId}`, amounts);
+  }
 }

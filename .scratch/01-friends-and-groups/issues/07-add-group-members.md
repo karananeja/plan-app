@@ -4,11 +4,15 @@
 
 **Blocked by:** 06 (Create a Group and list Groups).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Any member (not just the creator) can add Friends or new emails to the Group
-- [ ] New members are auto-friended with all existing members
-- [ ] A `GroupMemberAdded` Activity is recorded for each new member, with all members (including the new one) in the audience
-- [ ] Adding someone who's already a member is a no-op; non-members can't add anyone
-- [ ] An archived Group rejects new members
-- [ ] Service-level tests cover the above
+- [x] Any member (not just the creator) can add Friends or new emails to the Group
+- [x] New members are auto-friended with all existing members
+- [x] A `GroupMemberAdded` Activity is recorded for each new member, with all members (including the new one) in the audience
+- [x] Adding someone who's already a member is a no-op; non-members can't add anyone
+- [x] An archived Group rejects new members
+- [x] Service-level tests cover the above
+
+## Comments
+
+- 2026-10-01: Done. `POST /api/groups/:id/members { emails }`, shared with Group creation through one `addMembers` helper. Each newcomer is friended with everyone who joined before them, so `FriendAdded` is about the newcomer. Covered by the combined end-to-end check after Ticket 10 (see the conversation log).

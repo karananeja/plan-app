@@ -419,3 +419,32 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] Tickets 07 (add members), 08 (edit/archive/delete), 09 (leave/remove member) and 10 (remove Friend) are now unblocked.
+
+---
+
+## Entry 15 — 2026-10-01 — Ticket 07: add members to an existing Group (TDD)
+
+**Session goal:** Implement Tickets 07–10 in order ("go ahead"). Seams for all four were approved together ("go ahead"):
+- the API app in-process;
+- Activity read through `activityFor`;
+- a **`StubBalances`** passed to `createTestApp({ balances })` for "blocked while money is owed" guards. Spec 03 adds the same tests against real Expenses.
+
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Decided
+- `POST /api/groups/:id/members { emails }`: any member, active Groups only (`RuleError` 400 when archived), non-members get 404, re-adding is a no-op with no Activity.
+- **One `addMembers` helper** now backs both Group creation and adding members. `GroupCreated` is recorded after the initial members are added, so they're all in its audience.
+- **Newcomers are friended only with members who joined before them.** — **why:** friending against the full member list made `FriendAdded` name the wrong person (caught by the Ticket 06 activity test during the refactor).
+- Shared test helpers moved to `test/groups.ts`; `StubBalances` added to `test/app.ts`.
+
+### Changed
+- `apps/api`: `groups/service.ts` (`addMembers`, `requireMembership`, `requireActive`, `addGroupMembers`), the route, and `group-members.test.ts` (3 tests).
+- `packages/domain`: `addGroupMembersInput`.
+- `apps/web`: "Add people by email" form on the Group page (hidden when archived).
+
+### Verified
+- `pnpm test`: api 35/35. Tests 2–3 passed on first run because the guards came with step 1's helper. The archived-Group guard was confirmed by removing it (the test failed). The archived state was set up by a direct database write, because the archive endpoint arrives in Ticket 08.
+- Typecheck and lint are clean. The end-to-end check runs after Ticket 10.
+
+### Open / Next
+- [ ] Ticket 08.
