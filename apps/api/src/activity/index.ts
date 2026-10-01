@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Db, Tx } from "../db/client.ts";
 import { activity, activityAudience } from "../db/schema.ts";
 
-export type ActivityType = "FriendAdded" | "PersonInvited";
+export type ActivityType = "FriendAdded" | "PersonInvited" | "InviteClaimed";
 
 export type NewActivity = {
   type: ActivityType;

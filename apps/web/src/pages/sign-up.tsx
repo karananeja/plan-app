@@ -1,7 +1,7 @@
 import { currencyForLocale } from "@plan-app/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { AuthCard, FormError } from "@/components/auth-card.tsx";
 import { GoogleButton } from "@/components/google-button.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -11,6 +11,8 @@ import { authClient } from "@/lib/auth-client.ts";
 
 export function SignUpPage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const invitedEmail = params.get("email") ?? undefined;
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -33,7 +35,10 @@ export function SignUpPage() {
   }
 
   return (
-    <AuthCard title="Create your account" description="Split bills with friends without chasing anyone.">
+    <AuthCard
+      title="Create your account"
+      description={invitedEmail ? "A friend added you on Plan App. Sign up to see what's shared with you." : "Split bills with friends without chasing anyone."}
+    >
       <form onSubmit={onSubmit} className="grid gap-4">
         <GoogleButton />
         <div className="grid gap-2">
@@ -42,7 +47,7 @@ export function SignUpPage() {
         </div>
         <div className="grid gap-2">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" required autoComplete="email" />
+          <Input id="email" name="email" type="email" required autoComplete="email" defaultValue={invitedEmail} />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="password">Password</Label>

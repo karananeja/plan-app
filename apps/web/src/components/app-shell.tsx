@@ -50,17 +50,32 @@ export function AppShell() {
         </div>
       </header>
       <div className="mx-auto max-w-4xl px-4 py-6">
-        {!profile.emailVerified && (
-          <Alert className="mb-6">
-            <AlertDescription className="flex flex-wrap items-center gap-2">
-              Please verify {profile.email}: the link is in your email (running locally? check the API console).
-              <Button variant="link" size="sm" className="h-auto p-0" onClick={resend} disabled={resent}>
-                {resent ? "Sent again" : "Resend link"}
-              </Button>
-            </AlertDescription>
-          </Alert>
+        {profile.inviteWaiting ? (
+          <div className="mx-auto max-w-md py-12 text-center">
+            <h1 className="text-xl font-semibold">Verify your email to continue</h1>
+            <p className="mt-2 text-muted-foreground">
+              Your friends have already added you. Once you verify {profile.email}, everything they've shared with you
+              will be here. (Running locally? The link is in the API console.)
+            </p>
+            <Button className="mt-4" variant="outline" onClick={resend} disabled={resent}>
+              {resent ? "Sent again" : "Resend verification link"}
+            </Button>
+          </div>
+        ) : (
+          <>
+            {!profile.emailVerified && (
+              <Alert className="mb-6">
+                <AlertDescription className="flex flex-wrap items-center gap-2">
+                  Please verify {profile.email}: the link is in your email (running locally? check the API console).
+                  <Button variant="link" size="sm" className="h-auto p-0" onClick={resend} disabled={resent}>
+                    {resent ? "Sent again" : "Resend link"}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+            <Outlet />
+          </>
         )}
-        <Outlet />
       </div>
     </div>
   );

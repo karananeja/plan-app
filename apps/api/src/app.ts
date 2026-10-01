@@ -9,6 +9,7 @@ import type { EmailSender } from "./email.ts";
 import { noTransactionsYet, type Balances } from "./balances/index.ts";
 import { RuleError } from "./errors.ts";
 import { addFriend, listFriends } from "./friends/service.ts";
+import { invitedPersonFor } from "./people/index.ts";
 import { createMiddleware } from "hono/factory";
 
 export type AppDeps = { db: Db; email: EmailSender; auth: AuthConfig; balances?: Balances };
@@ -19,8 +20,11 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
   /** Requires a session; makes the signed-in User's Person available as `me`. */
   const signedIn = createMiddleware<{ Variables: { me: typeof person.$inferSelect } }>(async (c, next) => {
     const session = await auth.api.getSession({ headers: c.req.raw.headers });
-    const me = session && db.select().from(person).where(eq(person.userId, session.user.id)).get();
-    if (!me) return c.json({ error: "Not signed in" }, 401);
+    if (!session) return c.json({ error: "Not signed in" }, 401);
+    const me = db.select().from(person).where(eq(person.userId, session.user.id)).get();
+    if (!me) {
+      return c.json({ error: "Verify your email to continue: your friends have already added you." }, 403);
+    }
     c.set("me", me);
     await next();
   });
@@ -48,6 +52,7 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
         emailVerified: user.emailVerified,
         currency: user.currency ?? null,
         person: me ? { id: me.id, status: me.status } : null,
+        inviteWaiting: !me && Boolean(invitedPersonFor(db, user.email)),
       });
     })
     .patch("/me", zValidator("json", updateProfileInput), async (c) => {

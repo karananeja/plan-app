@@ -351,3 +351,36 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] Ticket 05 next: claiming invites, and the **invited-email sign-up 500** found in Ticket 04.
+
+---
+
+## Entry 13 — 2026-10-01 — Ticket 05: claim an invite on a verified email (TDD)
+
+**Session goal:** Implement Ticket 05 test-first, including the invited-email sign-up 500 found in Ticket 04.
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- "go ahead" for Ticket 05. Then approved option (a), "a User with no Person until verified", and the 5 API tests ("go ahead").
+
+### Decided
+- **No Person until verified** for a User whose email matches an Invited Person. `/api/me` returns `person: null, inviteWaiting: true`; the `signedIn` middleware returns **403** "Verify your email to continue…" when a session has no Person (401 stays for no session). — **why:** an unverified sign-up mustn't get someone's invited history, and a temporary Person would need merging.
+- **Claiming** lives in `people/index.ts` and runs from both better-auth hooks:
+  - `user.create.after`: Google sign-ups arrive verified and claim at once.
+  - `user.update.after`: verifying the email claims.
+  - The claim sets `userId`, `status: active` and the sign-up name on the **same Person id**, and records `InviteClaimed` (audience: the Person plus their Friends) in one transaction.
+- Matching is by verified email, so the join link isn't required. The link only pre-fills the sign-up email.
+
+### Changed
+- `apps/api`: `people/index.ts` (`onUserCreated`, `onUserUpdated`, `invitedPersonFor`); `auth.ts` hooks; the `signedIn` middleware returns 403 when there's no Person; `/api/me` has `inviteWaiting`; `InviteClaimed` activity type; `invites.test.ts` (5 tests).
+- `apps/web`: sign-up pre-fills `?email=` with an "a friend added you" description; app shell shows a "verify your email to continue" screen while an invite is waiting.
+- `docs/specs/01-friends-and-groups.md`: the pre-verification window is recorded.
+
+### Verified
+- `pnpm test`: api 25/25, domain 9/9. Test 1 reproduced the 500 before the fix. Test 5 (uninvited sign-up) passed on first run as a regression guard.
+- Typecheck, lint and web build are clean.
+- End-to-end through the dev proxy: Asha invites Zoe (join link in console), then Zoe signs up (200, `inviteWaiting`, friends 403), then Zoe verifies (302), then `/api/me` shows an active Person whose id equals the one Asha invited, and each sees the other as a Friend.
+- Incident: an earlier run's API was still running because `tsx watch` respawned it after the server PID was killed. The new run's API failed with EADDRINUSE and requests went to the stale server. This also explains the odd first end-to-end run in Ticket 04. Cleanup now also stops this project's `tsx watch` by its exact command line.
+- **Not verified:** the pages in a real browser.
+
+### Open / Next
+- [ ] Frontier: Ticket 06 (create & list Groups). Tickets 07–10 follow it.

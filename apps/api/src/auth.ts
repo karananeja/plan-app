@@ -1,9 +1,9 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { randomUUID } from "node:crypto";
 import type { Db } from "./db/client.ts";
 import * as schema from "./db/schema.ts";
 import type { EmailSender } from "./email.ts";
+import { onUserCreated, onUserUpdated } from "./people/index.ts";
 
 export type AuthConfig = {
   /** Signs session cookies and tokens. At least 32 characters. */
@@ -52,19 +52,12 @@ export function createAuth({ db, email, config }: { db: Db; email: EmailSender; 
     databaseHooks: {
       user: {
         create: {
-          // Every User is backed by an active Person (see GLOSSARY.md).
-          after: async (user) => {
-            db.insert(schema.person)
-              .values({
-                id: randomUUID(),
-                userId: user.id,
-                email: user.email,
-                name: user.name,
-                status: "active",
-                createdAt: new Date(),
-              })
-              .run();
-          },
+          // Every User is backed by a Person (see people/index.ts).
+          after: async (user) => onUserCreated(db, user),
+        },
+        update: {
+          // Verifying an invited email claims the Invited Person.
+          after: async (user) => onUserUpdated(db, user),
         },
       },
     },
