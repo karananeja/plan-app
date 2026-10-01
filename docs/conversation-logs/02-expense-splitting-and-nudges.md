@@ -159,7 +159,7 @@ Spec: [../specs/02-expense-splitting-and-nudges.md](../specs/02-expense-splittin
 
 ---
 
-## Entry 4 — 2026-10-01 — Spec broken into tickets
+## Entry 7 — 2026-10-01 — Spec broken into tickets
 
 **Session goal:** Publish Spec 02 as tracer-bullet tickets (`/to-tickets`).
 **Participants:** user, Claude Code (Opus 5.5)
