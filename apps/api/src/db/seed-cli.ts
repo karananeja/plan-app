@@ -9,4 +9,4 @@ mkdirSync(dirname(path), { recursive: true });
 const db = openDb(path);
 await seed(db, { secret: authSecret(), origin: webOrigin() });
 db.$client.close();
-console.log(`Seeded ${path}. Sign in as asha|ben|chen|divya@example.com with password "demo-password".`);
+console.log(`Seeded ${path}. Sign in as asha|ben|chen|divya@example.com with password "demo-password". Asha has created two demo Groups.`);

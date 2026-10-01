@@ -115,3 +115,27 @@ export const activityAudience = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.activityId, t.personId] }), index("activity_audience_person_idx").on(t.personId)],
 );
+
+/** A named set of Group Members who share Expenses (see GLOSSARY.md). "group" is an SQL keyword, hence the table name. */
+export const group = sqliteTable("expense_group", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type", { enum: ["trip", "home", "couple", "other"] }).notNull(),
+  emoji: text("emoji").notNull(),
+  colour: text("colour").notNull(),
+  /** ISO 4217. Every Expense in the Group uses it. */
+  currency: text("currency").notNull(),
+  createdById: text("created_by_id").notNull().references(() => person.id),
+  archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const groupMember = sqliteTable(
+  "group_member",
+  {
+    groupId: text("group_id").notNull().references(() => group.id),
+    personId: text("person_id").notNull().references(() => person.id),
+    joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.groupId, t.personId] }), index("group_member_person_idx").on(t.personId)],
+);

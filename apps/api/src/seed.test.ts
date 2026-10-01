@@ -24,4 +24,18 @@ describe("seed", () => {
       });
     }
   });
+
+  it("gives the demo Users shared Groups, without duplicating them on re-run", async () => {
+    const { app, db } = createTestApp();
+    await seed(db, TEST_AUTH);
+    await seed(db, TEST_AUTH);
+
+    const b = browser(app);
+    await b.post("/api/auth/sign-in/email", { email: "asha@example.com", password: DEMO_PASSWORD });
+    const { groups } = (await (await b.get("/api/groups")).json()) as { groups: { name: string; memberCount: number }[] };
+
+    expect(groups.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(groups.map((g) => g.name)).size).toBe(groups.length);
+    expect(groups.every((g) => g.memberCount >= 2)).toBe(true);
+  });
 });

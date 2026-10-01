@@ -384,3 +384,38 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] Frontier: Ticket 06 (create & list Groups). Tickets 07–10 follow it.
+
+---
+
+## Entry 14 — 2026-10-01 — Ticket 06: create and list Groups (TDD)
+
+**Session goal:** Implement Ticket 06 test-first.
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- "go ahead". Then approved 3 seams and 7 tests, plus a named 8-colour palette and type-based default emoji ("yes").
+
+### Decided
+- **Tables**: `expense_group` (`group` is an SQL keyword) holding name, type, emoji, colour, currency, creator and `archivedAt`; `group_member` (composite key, `joinedAt`). Members are listed in join order, creator first.
+- **Shared input** `createGroupInput` in `packages/domain`: name 1–60, type enum, colour enum, optional emoji, optional currency (defaults to the creator's profile currency, else USD), up to 50 member emails.
+- **Reuse**: `findOrInvitePerson`, `befriend` and `sendInvite` moved into `people/index.ts`, and both Friends and Groups use them. Invite emails are sent after the transaction commits.
+- **`FriendAdded` subject** is the person being added (the second in the pair), with `data.between` holding both ids. — **why:** auto-friending pairs that don't include the actor had no obvious subject.
+- **Activity**: `GroupCreated` (subject: group) and one `GroupMemberAdded` per added member, all with `groupId` set and every member in the audience.
+- **Ordering**: Groups are sorted by their latest Activity (`max(activity.occurredAt)` for the group, falling back to `createdAt`).
+- **`NotFoundError`** maps to 404. Non-members get 404, never 403, so a Group's existence isn't revealed.
+- **Balances**: the interface gains `groupBalances(groupId, personId)`, still reporting zero.
+
+### Changed
+- `apps/api`: migration 0003; `groups/service.ts`; `GET/POST /api/groups`, `GET /api/groups/:id`; people helpers; `errors.ts`; seed adds "Goa Trip" (all four demo users) and "Flat 4B" (Asha and Ben); `groups.test.ts` (6 tests) and a seed test.
+- `packages/domain`: `groups.ts` (types, colours, default emoji, `createGroupInput`).
+- `apps/web`: Groups page, "New group" dialog (type, colour, emoji, currency, Friends checkboxes plus other emails), Group page with members and Group Balances, a `GroupIcon` and a shared `BalanceText`; nav link.
+
+### Verified
+- `pnpm test`: api 32/32, domain 9/9. Three tests passed on first run because I'd written the code early: the validation (from the input schema in step 1), the non-member 404 and the ordering (both from `getGroup`/`listGroups` in step 1). That was a TDD slip. The 404 and ordering tests were confirmed to fail with the membership check removed and with ordering switched to creation time.
+- Typecheck, lint and web build are clean.
+- End-to-end through the dev proxy against a scratch database: seeded Groups are listed; creating "Lunch club" with Ben and a new email works, the currency defaults to INR, and the new person is marked invited with an invite link in the console; it sorts first; Ben gets 200 and Chen 404.
+- Shell issues this session: assigning `GID` in zsh fails (reserved variable), which aborted a run and left dev servers up. They were stopped, and the end-to-end check now runs as a bash script that stops every process under this project's `apps/` path.
+- **Not verified:** the pages in a real browser.
+
+### Open / Next
+- [ ] Tickets 07 (add members), 08 (edit/archive/delete), 09 (leave/remove member) and 10 (remove Friend) are now unblocked.

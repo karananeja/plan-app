@@ -9,9 +9,12 @@ export type CurrencyAmount = { currency: string; amount: number };
 export interface Balances {
   /** Net Balance between `me` and `other`, from `me`'s point of view. */
   netBalances(me: string, other: string): CurrencyAmount[];
+  /** A Group Member's Group Balance: positive means the Group owes them. */
+  groupBalances(groupId: string, personId: string): CurrencyAmount[];
 }
 
 /** Until Spec 03 there are no Transactions, so every balance is Settled Up. */
 export const noTransactionsYet: Balances = {
   netBalances: () => [],
+  groupBalances: () => [],
 };

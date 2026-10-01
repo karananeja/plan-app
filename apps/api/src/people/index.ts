@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import type { Db } from "../db/client.ts";
+import type { Db, Tx } from "../db/client.ts";
+import type { EmailSender } from "../email.ts";
 import { recordActivity } from "../activity/index.ts";
 import { friendship, person } from "../db/schema.ts";
 
@@ -57,5 +58,68 @@ function claimInvite(db: Db, user: AuthUser) {
       subject: { type: "person", id: invited.id },
       audience: [invited.id, ...friends.map((f) => f.id)],
     });
+  });
+}
+
+type Person = typeof person.$inferSelect;
+
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/**
+ * The Person with this email, or a new Invited Person (recording PersonInvited).
+ * `invited` is true only when the Invited Person was created now, i.e. an invite email is due.
+ */
+export function findOrInvitePerson(tx: Tx, actor: Person, rawEmail: string): { person: Person; invited: boolean } {
+  const email = normalizeEmail(rawEmail);
+  const existing = tx.select().from(person).where(eq(person.email, email)).get();
+  if (existing) return { person: existing, invited: false };
+  const created: Person = { id: randomUUID(), userId: null, email, name: email, status: "invited", createdAt: new Date() };
+  tx.insert(person).values(created).run();
+  recordActivity(tx, {
+    type: "PersonInvited",
+    actorId: actor.id,
+    subject: { type: "person", id: created.id },
+    audience: [actor.id, created.id],
+  });
+  return { person: created, invited: true };
+}
+
+/**
+ * Makes `a` and `b` mutual Friends. Records FriendAdded (by `actor`, about `b`, the person
+ * being added) only if they weren't Friends already.
+ */
+export function befriend(tx: Tx, actor: Person, aId: string, bId: string) {
+  if (aId === bId) return;
+  const now = new Date();
+  const added = tx
+    .insert(friendship)
+    .values([
+      { personId: aId, friendId: bId, createdAt: now },
+      { personId: bId, friendId: aId, createdAt: now },
+    ])
+    .onConflictDoNothing()
+    .run();
+  if (added.changes > 0) {
+    recordActivity(tx, {
+      type: "FriendAdded",
+      actorId: actor.id,
+      subject: { type: "person", id: bId },
+      audience: [aId, bId],
+      data: { between: [aId, bId] },
+    });
+  }
+}
+
+/** Emails a join link to an Invited Person. Call after the transaction that invited them commits. */
+export async function sendInvite(emailSender: EmailSender, origin: string, inviter: Person, email: string) {
+  const link = new URL("/sign-up", origin);
+  link.searchParams.set("email", email);
+  await emailSender.send({
+    to: email,
+    subject: `${inviter.name} invited you to Plan App`,
+    text: `${inviter.name} added you to split expenses together. Join to see what's shared with you.`,
+    link: link.toString(),
   });
 }

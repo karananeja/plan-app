@@ -1,29 +1,13 @@
-import { formatMoney } from "@plan-app/domain";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { FormError } from "@/components/auth-card.tsx";
+import { BalanceText } from "@/components/balance-text.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { api } from "@/lib/api.ts";
 import { initials } from "@/lib/me.ts";
-
-type CurrencyAmount = { currency: string; amount: number };
-
-function BalanceText({ balances }: { balances: CurrencyAmount[] }) {
-  if (balances.length === 0) return <span className="text-sm text-muted-foreground">Settled up</span>;
-  return (
-    <span className="text-right text-sm">
-      {balances.map(({ currency, amount }) => (
-        <span key={currency} className={amount > 0 ? "block text-emerald-600" : "block text-orange-600"}>
-          {amount > 0 ? "owes you " : "you owe "}
-          {formatMoney(Math.abs(amount), currency)}
-        </span>
-      ))}
-    </span>
-  );
-}
 
 export function FriendsPage() {
   const queryClient = useQueryClient();

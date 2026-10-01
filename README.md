@@ -25,7 +25,7 @@ Open http://localhost:5173 and sign up, or sign in as a demo user.
 
 ### Demo users (from `pnpm db:seed`)
 
-`asha@example.com`, `ben@example.com`, `chen@example.com`, `divya@example.com`, all with password `demo-password`. They're already verified.
+`asha@example.com`, `ben@example.com`, `chen@example.com`, `divya@example.com`, all with password `demo-password`. They're already verified. Asha has created two demo Groups: "Goa Trip" (all four) and "Flat 4B" (Asha and Ben).
 
 ### Emails when running locally
 

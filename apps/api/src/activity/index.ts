@@ -3,12 +3,12 @@ import { randomUUID } from "node:crypto";
 import type { Db, Tx } from "../db/client.ts";
 import { activity, activityAudience } from "../db/schema.ts";
 
-export type ActivityType = "FriendAdded" | "PersonInvited" | "InviteClaimed";
+export type ActivityType = "FriendAdded" | "PersonInvited" | "InviteClaimed" | "GroupCreated" | "GroupMemberAdded";
 
 export type NewActivity = {
   type: ActivityType;
   actorId: string;
-  subject: { type: "person"; id: string };
+  subject: { type: "person" | "group"; id: string };
   audience: string[];
   groupId?: string;
   data?: Record<string, unknown>;

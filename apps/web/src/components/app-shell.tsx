@@ -38,6 +38,7 @@ export function AppShell() {
           <Link to="/" className="font-semibold">Plan App</Link>
           <nav className="flex gap-4 text-sm">
             <NavLink to="/" end className={nav}>Home</NavLink>
+            <NavLink to="/groups" className={nav}>Groups</NavLink>
             <NavLink to="/friends" className={nav}>Friends</NavLink>
             <NavLink to="/profile" className={nav}>Profile</NavLink>
           </nav>

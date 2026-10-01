@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { addFriendInput, updateProfileInput } from "@plan-app/domain";
+import { addFriendInput, createGroupInput, updateProfileInput } from "@plan-app/domain";
 import { eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { createAuth, type AuthConfig } from "./auth.ts";
@@ -7,7 +7,8 @@ import type { Db } from "./db/client.ts";
 import { person, user } from "./db/schema.ts";
 import type { EmailSender } from "./email.ts";
 import { noTransactionsYet, type Balances } from "./balances/index.ts";
-import { RuleError } from "./errors.ts";
+import { NotFoundError, RuleError } from "./errors.ts";
+import { createGroup, getGroup, listGroups } from "./groups/service.ts";
 import { addFriend, listFriends } from "./friends/service.ts";
 import { invitedPersonFor } from "./people/index.ts";
 import { createMiddleware } from "hono/factory";
@@ -16,6 +17,8 @@ export type AppDeps = { db: Db; email: EmailSender; auth: AuthConfig; balances?:
 
 export function createApp({ db, email, auth: authConfig, balances = noTransactionsYet }: AppDeps) {
   const auth = createAuth({ db, email, config: authConfig });
+
+  const groupsDeps = { db, balances, email, origin: authConfig.origin };
 
   /** Requires a session; makes the signed-in User's Person available as `me`. */
   const signedIn = createMiddleware<{ Variables: { me: typeof person.$inferSelect } }>(async (c, next) => {
@@ -33,6 +36,7 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
     .basePath("/api")
     .onError((err, c) => {
       if (err instanceof RuleError) return c.json({ error: err.message }, 400);
+      if (err instanceof NotFoundError) return c.json({ error: err.message }, 404);
       throw err;
     })
     .get("/health", (c) => {
@@ -72,7 +76,12 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
     .post("/friends", signedIn, zValidator("json", addFriendInput), async (c) => {
       await addFriend({ db, email, origin: authConfig.origin }, c.var.me, c.req.valid("json").email);
       return c.json({ ok: true } as const);
-    });
+    })
+    .get("/groups", signedIn, (c) => c.json({ groups: listGroups(groupsDeps, c.var.me) }))
+    .post("/groups", signedIn, zValidator("json", createGroupInput), async (c) =>
+      c.json(await createGroup(groupsDeps, c.var.me, c.req.valid("json"))),
+    )
+    .get("/groups/:id", signedIn, (c) => c.json(getGroup(groupsDeps, c.var.me, c.req.param("id"))));
 }
 
 /** Route types for the web app's typed RPC client. */
