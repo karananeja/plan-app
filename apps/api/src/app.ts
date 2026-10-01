@@ -1,13 +1,22 @@
 import { zValidator } from "@hono/zod-validator";
-import { addFriendInput, addGroupMembersInput, createGroupInput, updateGroupInput, updateProfileInput } from "@plan-app/domain";
+import {
+  addFriendInput,
+  addGroupMembersInput,
+  createExpenseInput,
+  createGroupInput,
+  updateGroupInput,
+  updateProfileInput,
+} from "@plan-app/domain";
 import { eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { createAuth, type AuthConfig } from "./auth.ts";
 import type { Db } from "./db/client.ts";
 import { person, user } from "./db/schema.ts";
 import type { EmailSender } from "./email.ts";
 import { noTransactionsYet, type Balances } from "./balances/index.ts";
 import { NotFoundError, RuleError } from "./errors.ts";
+import { createGroupExpense, getExpense, listGroupExpenses } from "./expenses/service.ts";
 import {
   addGroupMembers,
   archiveGroup,
@@ -48,6 +57,8 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
     .onError((err, c) => {
       if (err instanceof RuleError) return c.json({ error: err.message }, 400);
       if (err instanceof NotFoundError) return c.json({ error: err.message }, 404);
+      // Hono's own errors (e.g. malformed JSON) already carry the right status.
+      if (err instanceof HTTPException) return c.json({ error: err.message }, err.status);
       throw err;
     })
     .get("/health", (c) => {
@@ -121,6 +132,13 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
       unarchiveGroup(groupsDeps, c.var.me, c.req.param("id"));
       return c.json({ ok: true } as const);
     })
+    .get("/groups/:id/expenses", signedIn, (c) =>
+      c.json({ expenses: listGroupExpenses({ db }, c.var.me, c.req.param("id")) }),
+    )
+    .post("/groups/:id/expenses", signedIn, zValidator("json", createExpenseInput), (c) =>
+      c.json(createGroupExpense({ db }, c.var.me, c.req.param("id"), c.req.valid("json"))),
+    )
+    .get("/expenses/:id", signedIn, (c) => c.json(getExpense({ db }, c.var.me, c.req.param("id"))))
     .post("/groups/:id/members", signedIn, zValidator("json", addGroupMembersInput), async (c) => {
       await addGroupMembers(groupsDeps, c.var.me, c.req.param("id"), c.req.valid("json"));
       return c.json({ ok: true } as const);

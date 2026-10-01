@@ -207,3 +207,47 @@ Spec: [../specs/02-expense-splitting-and-nudges.md](../specs/02-expense-splittin
 
 ### Open / Next
 - [ ] Ticket 02: equal-split Group Expense (with Spec 01 carry-overs).
+
+---
+
+## Entry 9 — 2026-10-01 — Ticket 02: equal-split Group Expense (TDD)
+
+**Session goal:** Implement the Expense tracer bullet test-first, with the Spec 01 carry-overs.
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- `/tdd`. The user approved the API shape, amount as typed text, the "my effect" definition and 6 tests ("yes").
+
+### Decided
+- **Tables**: `expense` (group optional; date as `YYYY-MM-DD` text; `totalMinor`; payer; method; note; `version`; `deletedAt`) and `expense_participant` (position, raw `input`, `shareMinor`).
+- **Amount** arrives as text and is converted with `toMinorUnits` in the Group's currency. Too many decimals gives a 400 with the reason.
+- **My effect**: the Payer lent the total minus their own Share (the full total if not a Participant); other Participants owe their Share; everyone else is "none".
+- **Rules**: Payer and Participants must be Group Members (400); non-members get 404 for create, list and detail. Split errors come back with the calculator's message.
+- **Carry-overs**:
+  - Adding an Expense to an archived Group un-archives it and records `GroupUpdated`.
+  - `updateGroup` refuses a currency change and `deleteGroup` refuses deletion once the Group has non-deleted Expenses.
+  - A claimed invite keeps its Expenses, because the Person id is the same.
+- **`ExpenseCreated`** (subject: expense; data: description, total, currency) goes to every Group Member.
+- **Seed**: four demo Expenses across Goa Trip and Flat 4B, skipped when they already exist.
+
+### Found and fixed along the way
+- **Malformed JSON gave 500.** `onError` re-threw Hono's `HTTPException`. It now returns that exception's status. A regression test was added (`errors.test.ts`).
+- **Vite `strictPort: true`.** End-to-end runs sometimes hit a stale Vite still shutting down, because the new one had silently moved to port 5174. This is the probable cause of the intermittent "first sign-in fails" in Ticket 10 of Spec 01 and in this ticket's first run. With strict ports, a busy port fails loudly, which also protects the user (email links assume 5173). The end-to-end script now waits for free ports and sends JSON from files.
+
+### Changed
+- `apps/api`: migration 0004; `expenses/service.ts`; three routes; `groups/service.ts` (`hasExpenses`, exported `requireMembership` and `memberIds`); seed Expenses; `group-expenses.test.ts` (6), seed test, `errors.test.ts`; test helpers (`test/expenses.ts`, `postRaw`, looser `Browser` type).
+- `packages/domain`: `expenses.ts` (categories, `createExpenseInput`).
+- `apps/web`: "Add expense" dialog (equal split with live per-person Shares from the shared calculator); Expenses list on the Group page with my effect; Expense page; shadcn textarea; Vite `strictPort`.
+
+### Verified
+- `pnpm test`: api 55/55, domain 30/30. Tests 1–4 and 6 went red first. Test 5 (claimed invite keeps Expenses) passed on first run, as expected: it guards the same-Person design.
+- Typecheck, lint and web build are clean.
+- End-to-end through the dev proxy (scratch database):
+  - seeded Goa Expenses show the right effect for Ben (owe ₹1,250, lent ₹1,350, owe ₹800);
+  - a new Expense shows Ben owing ₹500 with Shares 500/500;
+  - "10.555" gives 400 "INR amounts allow at most 2 decimal places";
+  - a currency change gives 400.
+- **Not verified:** the pages in a real browser.
+
+### Open / Next
+- [ ] Tickets 03 (every split method), 04 (non-group + Friend page) and 06 (delete/restore) are unblocked.

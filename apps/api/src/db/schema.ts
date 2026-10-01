@@ -139,3 +139,42 @@ export const groupMember = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.groupId, t.personId] }), index("group_member_person_idx").on(t.personId)],
 );
+
+/** A single bill paid by one Payer and divided among Participants by a Split (see GLOSSARY.md). */
+export const expense = sqliteTable(
+  "expense",
+  {
+    id: text("id").primaryKey(),
+    /** Null for a non-group Expense. */
+    groupId: text("group_id").references(() => group.id),
+    description: text("description").notNull(),
+    category: text("category").notNull(),
+    /** The calendar date on the bill, YYYY-MM-DD, no time zone. */
+    date: text("date").notNull(),
+    currency: text("currency").notNull(),
+    totalMinor: integer("total_minor").notNull(),
+    payerId: text("payer_id").notNull().references(() => person.id),
+    method: text("method", { enum: ["equal", "exact", "percentage", "shares"] }).notNull(),
+    note: text("note"),
+    createdById: text("created_by_id").notNull().references(() => person.id),
+    /** Optimistic concurrency: incremented on every edit. */
+    version: integer("version").notNull().default(1),
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [index("expense_group_idx").on(t.groupId)],
+);
+
+/** A Participant's Share of an Expense. `input` is what was typed (amount, basis points or units). */
+export const expenseParticipant = sqliteTable(
+  "expense_participant",
+  {
+    expenseId: text("expense_id").notNull().references(() => expense.id),
+    personId: text("person_id").notNull().references(() => person.id),
+    position: integer("position").notNull(),
+    input: integer("input"),
+    shareMinor: integer("share_minor").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.expenseId, t.personId] }), index("expense_participant_person_idx").on(t.personId)],
+);

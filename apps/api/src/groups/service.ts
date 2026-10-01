@@ -1,9 +1,9 @@
 import { DEFAULT_GROUP_EMOJI, type AddGroupMembersInput, type CreateGroupInput, type UpdateGroupInput } from "@plan-app/domain";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { Balances } from "../balances/index.ts";
 import type { Db, Tx } from "../db/client.ts";
-import { activity, group, groupMember, person, user } from "../db/schema.ts";
+import { activity, expense, group, groupMember, person, user } from "../db/schema.ts";
 import type { EmailSender } from "../email.ts";
 import { NotFoundError, RuleError } from "../errors.ts";
 import { recordActivity } from "../activity/index.ts";
@@ -80,7 +80,7 @@ function addMembers(tx: Tx, me: Person, groupId: string, emails: string[]) {
 }
 
 /** The Group, if I'm a member; otherwise NotFoundError (non-members can't tell it exists). */
-function requireMembership(db: Db | Tx, me: Person, groupId: string) {
+export function requireMembership(db: Db | Tx, me: Person, groupId: string) {
   const row = db
     .select({ g: group })
     .from(groupMember)
@@ -105,7 +105,14 @@ export async function addGroupMembers({ db, email: emailSender, origin }: Groups
   for (const e of invited) await sendInvite(emailSender, origin, me, e);
 }
 
-function memberIds(tx: Db | Tx, groupId: string) {
+/** Whether a Group has any (non-deleted) Expenses. Locks its currency and prevents deletion. */
+function hasExpenses(tx: Db | Tx, groupId: string) {
+  return Boolean(
+    tx.select({ id: expense.id }).from(expense).where(and(eq(expense.groupId, groupId), isNull(expense.deletedAt))).get(),
+  );
+}
+
+export function memberIds(tx: Db | Tx, groupId: string) {
   return tx.select({ id: groupMember.personId }).from(groupMember).where(eq(groupMember.groupId, groupId)).all().map((m) => m.id);
 }
 
@@ -120,6 +127,9 @@ export function updateGroup({ db }: GroupsDeps, me: Person, groupId: string, inp
       if (to !== undefined && to !== g[key]) changes[key] = { from: g[key], to };
     }
     if (Object.keys(changes).length === 0) return;
+    if (changes.currency && hasExpenses(tx, groupId)) {
+      throw new RuleError("The currency can't be changed once the group has expenses.");
+    }
     tx.update(group)
       .set(Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.to])))
       .where(eq(group.id, groupId))
@@ -174,6 +184,7 @@ export function deleteGroup({ db }: GroupsDeps, me: Person, groupId: string) {
   db.transaction((tx) => {
     const g = requireMembership(tx, me, groupId);
     if (g.createdById !== me.id) throw new RuleError("Only the person who created this group can delete it.");
+    if (hasExpenses(tx, groupId)) throw new RuleError("A group with expenses can't be deleted. Archive it instead.");
     recordActivity(tx, {
       type: "GroupDeleted",
       actorId: me.id,

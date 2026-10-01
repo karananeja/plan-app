@@ -1,7 +1,7 @@
 import { expect } from "vitest";
-import type { signedUp } from "./app.ts";
+import type { browser } from "./app.ts";
 
-export type Browser = Awaited<ReturnType<typeof signedUp>>;
+export type Browser = ReturnType<typeof browser>;
 export type GroupSummary = {
   id: string; name: string; type: string; emoji: string; colour: string; currency: string; memberCount: number; archived: boolean;
 };

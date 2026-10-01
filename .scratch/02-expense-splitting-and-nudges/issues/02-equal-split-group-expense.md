@@ -6,17 +6,26 @@ It also delivers the Spec 01 criteria that needed Expenses.
 
 **Blocked by:** 01 (Split calculator).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] A Group Member can create an equal-split Expense with any Group Members as Payer and Participants. Non-members as Payer or Participant are rejected
-- [ ] The Expense uses the Group's currency; amount is entered as a decimal and stored in minor units
-- [ ] `ExpenseCreated` Activity is recorded for all Group Members
-- [ ] Group page lists Expenses (newest by date first) with the viewer's "you owe / you lent / not involved"; the Expense page shows every Share
-- [ ] Only Group Members can see the Group's Expenses (others get not found)
-- [ ] Carried over from Spec 01:
-  - [ ] Adding an Expense to an archived Group un-archives it
-  - [ ] A Group's currency can't be changed once it has Expenses
-  - [ ] A Group with Expenses can't be deleted
-  - [ ] An Invited Person who's a Participant still has those Expenses after claiming the invite
-- [ ] The seed adds a few equal-split Expenses to the demo Groups (safe to re-run)
-- [ ] Service-level tests cover the above
+- [x] A Group Member can create an equal-split Expense with any Group Members as Payer and Participants. Non-members as Payer or Participant are rejected
+- [x] The Expense uses the Group's currency; amount is entered as a decimal and stored in minor units
+- [x] `ExpenseCreated` Activity is recorded for all Group Members
+- [x] Group page lists Expenses (newest by date first) with the viewer's "you owe / you lent / not involved"; the Expense page shows every Share
+- [x] Only Group Members can see the Group's Expenses (others get not found)
+- [x] Carried over from Spec 01:
+  - [x] Adding an Expense to an archived Group un-archives it
+  - [x] A Group's currency can't be changed once it has Expenses
+  - [x] A Group with Expenses can't be deleted
+  - [x] An Invited Person who's a Participant still has those Expenses after claiming the invite
+- [x] The seed adds a few equal-split Expenses to the demo Groups (safe to re-run)
+- [x] Service-level tests cover the above
+
+## Comments
+
+- 2026-10-01: Done.
+  - API: `POST /api/groups/:id/expenses` (amount as typed, converted in the Group's currency), `GET /api/groups/:id/expenses` (with `myEffect`: lent / owe / none), `GET /api/expenses/:id`.
+  - The input currently takes `method: "equal"` and `participantIds`; Ticket 03 widens it to the other methods.
+  - Un-archiving through an Expense is recorded as `GroupUpdated` (archived true → false).
+  - Also fixed: malformed JSON bodies returned 500 instead of 400.
+  - Checked end-to-end through the dev proxy. Not checked in a real browser.

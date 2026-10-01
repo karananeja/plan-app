@@ -38,4 +38,19 @@ describe("seed", () => {
     expect(new Set(groups.map((g) => g.name)).size).toBe(groups.length);
     expect(groups.every((g) => g.memberCount >= 2)).toBe(true);
   });
+
+  it("adds a few Expenses to the demo Groups, without duplicating them on re-run", async () => {
+    const { app, db } = createTestApp();
+    await seed(db, TEST_AUTH);
+    await seed(db, TEST_AUTH);
+
+    const b = browser(app);
+    await b.post("/api/auth/sign-in/email", { email: "ben@example.com", password: DEMO_PASSWORD });
+    const { groups } = (await (await b.get("/api/groups")).json()) as { groups: { id: string; name: string }[] };
+    const goa = groups.find((g) => g.name === "Goa Trip")!;
+    const { expenses } = (await (await b.get(`/api/groups/${goa.id}/expenses`)).json()) as { expenses: { description: string }[] };
+
+    expect(expenses.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(expenses.map((e) => e.description)).size).toBe(expenses.length);
+  });
 });

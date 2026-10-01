@@ -1,19 +1,30 @@
+import { formatMoney } from "@plan-app/domain";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { BalanceText } from "@/components/balance-text.tsx";
+import { AddExpenseDialog } from "@/components/add-expense-dialog.tsx";
 import { EditGroupDialog } from "@/components/edit-group-dialog.tsx";
+import { EffectText } from "@/components/effect-text.tsx";
 import { GroupIcon } from "@/components/group-icon.tsx";
 import { FormError } from "@/components/auth-card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { api } from "@/lib/api.ts";
+import { formatBillDate } from "@/lib/expenses.ts";
 import { initials, useMe } from "@/lib/me.ts";
 
 export function GroupPage() {
   const { id = "" } = useParams();
   const queryClient = useQueryClient();
+  const expenses = useQuery({
+    queryKey: ["groups", id, "expenses"],
+    queryFn: async () => {
+      const res = await api.groups[":id"].expenses.$get({ param: { id } });
+      return res.ok ? (await res.json()).expenses : [];
+    },
+  });
   const navigate = useNavigate();
   const me = useMe();
   const action = useMutation({
@@ -156,7 +167,29 @@ export function GroupPage() {
         )}
         <FormError message={addMembers.error?.message ?? null} />
       </section>
-      <p className="text-sm text-muted-foreground">Expenses are coming next.</p>
+      <section className="grid gap-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium">Expenses</h2>
+          {me.data?.person && <AddExpenseDialog groupId={g.id} currency={g.currency} members={g.members} meId={me.data.person.id} />}
+        </div>
+        {expenses.data?.length === 0 && <p className="text-sm text-muted-foreground">No expenses yet.</p>}
+        <ul className="divide-y rounded-md border">
+          {expenses.data?.map((e) => (
+            <li key={e.id}>
+              <Link to={`/expenses/${e.id}`} className="flex items-center gap-3 p-3 hover:bg-muted/50">
+                <span className="w-12 shrink-0 text-xs text-muted-foreground">{formatBillDate(e.date)}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{e.description}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {e.payer.personId === me.data?.person?.id ? "You" : e.payer.name} paid {formatMoney(e.totalMinor, e.currency)}
+                  </p>
+                </div>
+                <EffectText effect={e.myEffect} currency={e.currency} />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

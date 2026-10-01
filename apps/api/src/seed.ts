@@ -1,8 +1,9 @@
-import { createGroupInput } from "@plan-app/domain";
+import { createExpenseInput, createGroupInput } from "@plan-app/domain";
 import { and, eq } from "drizzle-orm";
 import { createAuth, type AuthConfig } from "./auth.ts";
 import type { Db } from "./db/client.ts";
-import { group, person, user } from "./db/schema.ts";
+import { expense, group, person, user } from "./db/schema.ts";
+import { createGroupExpense } from "./expenses/service.ts";
 import { createGroup } from "./groups/service.ts";
 import { noTransactionsYet } from "./balances/index.ts";
 import type { EmailSender } from "./email.ts";
@@ -15,6 +16,14 @@ const DEMO_USERS = [
   { name: "Divya Menon", email: "divya@example.com" },
 ];
 const DEMO_PASSWORD = "demo-password";
+
+/** Demo Group Expenses: [group, description, amount, date, category, payer, participants]. */
+const DEMO_GROUP_EXPENSES = [
+  ["Goa Trip", "Beach shack dinner", "3200", "2026-09-20", "food", "asha", ["asha", "ben", "chen", "divya"]],
+  ["Goa Trip", "Scooter rental", "1800", "2026-09-21", "travel", "ben", ["asha", "ben", "chen", "divya"]],
+  ["Goa Trip", "Parasailing", "2500", "2026-09-22", "entertainment", "chen", ["ben", "chen"]],
+  ["Flat 4B", "Electricity bill", "2140", "2026-09-05", "utilities", "asha", ["asha", "ben"]],
+] as const;
 
 /** Demo Groups, created by Asha. */
 const DEMO_GROUPS = [
@@ -40,5 +49,24 @@ export async function seed(db: Db, config: AuthConfig) {
   for (const demo of DEMO_GROUPS) {
     const exists = db.select().from(group).where(and(eq(group.name, demo.name), eq(group.createdById, asha.id))).get();
     if (!exists) await createGroup(deps, asha, createGroupInput.parse({ ...demo, memberEmails: [...demo.memberEmails] }));
+  }
+
+  const personByName = (name: string) => db.select().from(person).where(eq(person.email, `${name}@example.com`)).get()!;
+  for (const [groupName, description, amount, date, category, payer, participants] of DEMO_GROUP_EXPENSES) {
+    const g = db.select().from(group).where(and(eq(group.name, groupName), eq(group.createdById, asha.id))).get();
+    if (!g) continue;
+    const exists = db.select().from(expense).where(and(eq(expense.groupId, g.id), eq(expense.description, description))).get();
+    if (exists) continue;
+    const payerPerson = personByName(payer);
+    createGroupExpense(
+      { db },
+      payerPerson,
+      g.id,
+      createExpenseInput.parse({
+        description, amount, date, category, method: "equal",
+        payerId: payerPerson.id,
+        participantIds: participants.map((n) => personByName(n).id),
+      }),
+    );
   }
 }

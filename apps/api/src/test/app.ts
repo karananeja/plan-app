@@ -39,7 +39,7 @@ type TestApp = ReturnType<typeof createTestApp>["app"];
 /** A browser-like client: keeps the session cookie between requests. */
 export function browser(app: TestApp) {
   const cookies = new Map<string, string>();
-  async function request(method: string, path: string, body?: unknown) {
+  async function request(method: string, path: string, body?: unknown, raw = false) {
     const url = path.startsWith("http") ? new URL(path) : new URL(path, TEST_ORIGIN);
     const res = await app.request(url.pathname + url.search, {
       method,
@@ -48,7 +48,7 @@ export function browser(app: TestApp) {
         cookie: [...cookies].map(([k, v]) => `${k}=${v}`).join("; "),
         ...(body === undefined ? {} : { "content-type": "application/json" }),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : raw ? String(body) : JSON.stringify(body),
     });
     for (const header of res.headers.getSetCookie()) {
       const [pair = ""] = header.split(";");
@@ -63,6 +63,8 @@ export function browser(app: TestApp) {
     post: (path: string, body: unknown = {}) => request("POST", path, body),
     patch: (path: string, body: unknown) => request("PATCH", path, body),
     delete: (path: string) => request("DELETE", path),
+    /** POST a body exactly as given (e.g. malformed JSON). */
+    postRaw: (path: string, body: string) => request("POST", path, body, true),
   };
 }
 

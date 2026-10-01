@@ -15,6 +15,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: Number(env.WEB_PORT ?? 5173),
+      // Fail rather than silently move to another port: email links and WEB_ORIGIN assume this one.
+      strictPort: true,
       proxy: {
         "/api": `http://localhost:${env.API_PORT ?? 8787}`,
       },
