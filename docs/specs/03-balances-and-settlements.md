@@ -58,7 +58,7 @@ I record a $25 Settlement to X, and the Net Balance becomes $0, Settled Up.
   - *Balances*: a read-side module that derives balances from the Ledger. A deep module behind a small interface.
   - *Settlements*: create/edit/delete Settlements.
   - *Debt simplifier*: a pure function that takes a Group's member balances and returns a minimal-ish list of transfers.
-- **Replaces the zero-reporting Balances implementation from Spec 01.** Spec 01's guards (leave Group, remove member, archive Group, remove Friend) gain real-ledger "blocked when non-zero" tests here.
+- **Builds on the Ledger-backed Balances from Spec 02 (ticket 07)**, which already derive Net Balance, Group Balance and Group Debts from Expenses and replaced Spec 01's zero-reporting implementation. Spec 01's guards got their real-ledger tests there. This spec adds Settlements and Settlement Allocation to the same derivation.
 - **Balances are derived.** Per (personA, personB, currency, groupId|null) the pairwise amount = Σ Debts A→B − Σ Debts B→A − Settlement Allocations, from non-deleted Transactions. That's the **Group Debt** when groupId is set, and the non-group amount when it's null. Net Balance = sum over all groupIds for the pair, per currency. **Group Balance** for a member = the sum of their Group Debts with every other member in that Group. A cached projection may be used for speed, but it must be rebuildable from the Ledger and checked against it in tests.
 - **Sign convention**: in the Balances interface, a positive amount means *the other person owes me*, and a negative amount means *I owe them*.
 - **Settlement shape (indicative)**:

@@ -86,10 +86,13 @@ In every case, A, B and C each owe me their Share. My own Share is what I consum
 - **Rounding rule**: compute exact rational Shares and floor each to the minor unit. Hand out the leftover minor units one at a time by largest fractional remainder. Break ties by Participant order as entered. Σ shares must equal total exactly; this is an invariant.
 - **Validation**: at least one Participant; total > 0; Exact must sum to the total; Percentage must sum to 100.00%; Share Units must be positive integers; Group Expenses may only include Group Members; for non-group Expenses, the Payer and Participants may be any of the creator's Friends or new Invited Persons. Everyone on the Expense is then auto-friended with everyone else on it (Spec 01).
 - **Single Payer in v1.** Multiple payers are out of scope.
-- **Debts derivation**: each Participant other than the Payer owes the Payer their `shareMinor`. Spec 03 reads this; Expenses doesn't maintain balances.
+- **Debts derivation**: each Participant other than the Payer owes the Payer their `shareMinor`. Expenses never maintain balances themselves.
+- **Real Balances are built in this spec** (ticket 07): a Ledger-backed `Balances` implementation derives Net Balance, Group Balance and Group Debts from Expenses, replacing Spec 01's zero-reporting one. Spec 03 adds Settlements and Settlement Allocation to the same derivation. — **why:** Nudges need real balances, and "balances update immediately" (story 21) is a Spec 02 story.
 - **Edits create a new revision.** The previous revision is kept for history and the Activity diff. Optimistic concurrency uses `version`.
 - **Who may edit**: the creator, the Payer, or any Participant. In a Group, any Group Member.
 - **Nudge rules**: the target must be a User; Nudge is disabled for Invited Persons in v1. Nudges are delivered in-app only (Spec 05). Allowed only if the Net Balance (Spec 03) shows the target owes the nudger more than 0. Rate limit: 1 per (nudger, target) per rolling 24h. The Nudge carries the current Net Balance amount and currency, plus an optional message of up to 140 chars. Nudging a Group nudges each member who owes the nudger, by the amount of their **Group Debt** to the nudger.
+- **Debtor-side Nudges before Spec 05**: the nudged person sees undismissed Nudges as a banner on Home. Linking a Nudge to a settle-up screen waits for Spec 03.
+- **Friend page**: shows a Friend and the non-group Expenses you share, with the Nudge button.
 - **Events emitted**: `ExpenseCreated`, `ExpenseUpdated` (with diff), `ExpenseDeleted`, `ExpenseRestored`, `NudgeSent`.
 - **API surface (indicative)**: `previewSplit(input)`, `createExpense(input)`, `updateExpense(id, version, input)`, `deleteExpense(id)`, `restoreExpense(id)`, `getExpense(id)`, `getExpenseHistory(id)`, `sendNudge(targetId, {groupId?, message?})`, `nudgeGroupDebtors(groupId, message?)`.
 
@@ -124,3 +127,4 @@ These Spec 01 criteria need Expenses, so they're built and tested here:
 
 - "Ask friends to pay" in the original requirement is met by Debts appearing in their balances plus Nudges. No separate "request" object exists.
 - Storing both `input` and `shareMinor` keeps old Expenses stable and lets the edit UI reproduce what the user typed.
+- Tickets: [`.scratch/02-expense-splitting-and-nudges/`](../../.scratch/02-expense-splitting-and-nudges/README.md).

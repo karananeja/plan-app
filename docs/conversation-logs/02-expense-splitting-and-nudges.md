@@ -156,3 +156,28 @@ Spec: [../specs/02-expense-splitting-and-nudges.md](../specs/02-expense-splittin
 
 ### Open / Next
 - [ ] The user confirms the overall design, then: git init, private GitHub repo `plan-app`, `/setup-matt-pocock-skills`, tickets, TDD implementation.
+
+---
+
+## Entry 4 — 2026-10-01 — Spec broken into tickets
+
+**Session goal:** Publish Spec 02 as tracer-bullet tickets (`/to-tickets`).
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- `/to-tickets docs/specs/02-expense-splitting-and-nudges.md`. The user accepted decisions A–C and the 9-ticket breakdown ("yes go ahead").
+
+### Decided
+- **A. Real Balances are built in Spec 02 (ticket 07)**, derived from Expenses, replacing Spec 01's zero-reporting implementation. Spec 03 adds Settlements on top. — **why:** Nudges need real balances, and story 21 ("balances update immediately") is in this spec. Spec 01's real-ledger guard tests also move here.
+- **B. Debtor-side Nudges** appear as a dismissible banner on Home until Spec 05's notification centre exists.
+- **C. Friend page** for non-group Expenses and the Nudge button.
+- **Spec 01 carry-overs** go in ticket 02 (un-archive on Expense, currency lock, delete block, claimed invite keeps Expenses) and in tickets 02 and 04 (seed Expenses).
+- Ticket 01 (split calculator) is a pure prefactor: the deep module everything else uses.
+
+### Changed
+- `.scratch/02-expense-splitting-and-nudges/README.md` (graph) and `issues/01`–`09`.
+- `docs/specs/02-expense-splitting-and-nudges.md`: real Balances here, the debtor banner, the Friend page, a link to the tickets.
+- `docs/specs/03-balances-and-settlements.md`: builds on Spec 02's Balances.
+
+### Open / Next
+- [ ] Implement ticket 01 (split calculator) with `/tdd`.
