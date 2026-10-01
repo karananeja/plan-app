@@ -1,22 +1,25 @@
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button.tsx";
-import { api } from "@/lib/api.ts";
+import { BrowserRouter, Route, Routes } from "react-router";
+import { AppShell } from "@/components/app-shell.tsx";
+import { ForgotPasswordPage } from "@/pages/forgot-password.tsx";
+import { HomePage } from "@/pages/home.tsx";
+import { ProfilePage } from "@/pages/profile.tsx";
+import { ResetPasswordPage } from "@/pages/reset-password.tsx";
+import { SignInPage } from "@/pages/sign-in.tsx";
+import { SignUpPage } from "@/pages/sign-up.tsx";
 
 export function App() {
-  const health = useQuery({
-    queryKey: ["health"],
-    queryFn: async () => (await api.health.$get()).json(),
-  });
-
   return (
-    <main className="mx-auto max-w-xl p-8">
-      <h1 className="text-2xl font-semibold">Plan App</h1>
-      <p className="mt-4 text-sm text-muted-foreground">
-        API: {health.isPending ? "…" : health.isError ? "unreachable" : health.data.status}
-      </p>
-      <Button className="mt-4" variant="outline" onClick={() => health.refetch()}>
-        Check again
-      </Button>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/sign-in" element={<SignInPage />} />
+        <Route path="/sign-up" element={<SignUpPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route element={<AppShell />}>
+          <Route index element={<HomePage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }

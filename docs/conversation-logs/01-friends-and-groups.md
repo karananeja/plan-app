@@ -243,3 +243,46 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] Ticket 02: email + password sign-in and profile (first migration: Person).
+
+---
+
+## Entry 10 — 2026-10-01 — Ticket 02: email + password sign-in and profile (TDD)
+
+**Session goal:** Implement `.scratch/01-friends-and-groups/issues/02-email-password-sign-in-and-profile.md` test-first.
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- `/tdd` for Ticket 02. The user approved the seams ("go ahead"):
+  1. The Hono app in-process, with a cookie-keeping test client and a fake email sender, for 6 account flows.
+  2. The domain function `currencyForLocale`.
+  3. The `seed(db)` function, checked by signing in through seam 1.
+
+### Decided
+- **Person table** added (`invited | active`, unique email, optional `userId`). A better-auth `user.create.after` hook creates the active Person. — **why:** Expenses will reference a Person, never a User (Spec 01).
+- **Name lives on both User and Person**; `PATCH /api/me` updates both in one transaction. — **why:** Invited Persons have no User but need a name.
+- **Profile currency** is a better-auth additional field on User. It's validated by a shared zod `currencyCode` schema (3 letters, known to `Intl`). The web app sends `currencyForLocale(navigator.language)` at sign-up.
+- **Unverified Users can sign in.** Verification matters for claiming invites (Ticket 05). A test fixes this behaviour.
+- **Email links point at the web origin** (`WEB_ORIGIN`, default :5173), which proxies `/api`, so links work from the browser.
+- **The seed** creates asha/ben/chen/divya @example.com with password `demo-password`, already verified, currency INR. It skips Users that already exist.
+- Added `@hono/zod-validator` for typed request bodies, and `react-router` and the better-auth React client on the web side.
+
+### Changed
+- `apps/api`: schema (better-auth tables + `person`) and first migration; `auth.ts`, `email.ts`, `seed.ts`, `db/seed-cli.ts`, `GET/PATCH /api/me`; config for `BETTER_AUTH_SECRET` and `WEB_ORIGIN`; test helpers (fake email sender, cookie-keeping test client).
+- `packages/domain`: `currencyCode`, `updateProfileInput`, `currencyForLocale`.
+- `apps/web`: router; sign-in, sign-up, forgot-password, reset-password and profile pages; an app shell with initials avatar, sign-out and an "unverified email" banner with resend; shadcn input, label, card and alert. The Ticket 01 health page was replaced.
+- `README.md`, `.env.example`: demo users, local emails, auth settings.
+
+### Verified
+- `pnpm test`: domain 9/9, api 8/8. Two API tests (sign-out, sign-in) passed on first run because better-auth provides the behaviour. The sign-out test was confirmed to fail with the sign-out step removed. The sign-in test guards the "unverified Users can sign in" decision.
+- `pnpm typecheck`, `pnpm lint` and the web production build are clean.
+- End-to-end with curl through the dev proxy against a scratch database:
+  - Seeded sign-in.
+  - Sign-up, then following the verification link from the console (302 to `/`), then `emailVerified: true`.
+  - Forgot password, reset link, `/reset-password?token=…`, new password works.
+  - `PATCH /api/me` currency.
+  - Sign-out, then 401.
+- **Not verified:** the pages in a real browser.
+- Incident: the first end-to-end run hit a zsh glob error that skipped setting the scratch `DATABASE_PATH`. The run wrote a test User into `data/plan-app.sqlite`, which had been created by this session in Ticket 01 and held no user data. The file was deleted and the run was repeated against the scratch database.
+
+### Open / Next
+- [ ] Ticket 03 (Google sign-in) and Ticket 04 (add Friend & Friends list) are now unblocked.

@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createApp } from "./app.ts";
-import { createTestDb } from "./test/db.ts";
+import { createTestApp } from "./test/app.ts";
 
 describe("GET /api/health", () => {
   it("reports the API and its migrated database as ok", async () => {
-    const app = createApp({ db: createTestDb() });
+    const { app } = createTestApp();
 
     const res = await app.request("/api/health");
 

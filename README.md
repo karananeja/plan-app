@@ -17,10 +17,19 @@ Split shared bills with friends, see netted balances, and nudge people to settle
 pnpm install
 cp .env.example .env   # optional; defaults work without it
 pnpm db:migrate
+pnpm db:seed           # optional demo users
 pnpm dev
 ```
 
-Open http://localhost:5173. The page shows "API: ok" when the web app can reach the API.
+Open http://localhost:5173 and sign up, or sign in as a demo user.
+
+### Demo users (from `pnpm db:seed`)
+
+`asha@example.com`, `ben@example.com`, `chen@example.com`, `divya@example.com`, all with password `demo-password`. They're already verified.
+
+### Emails when running locally
+
+The app doesn't send real email locally. Verification links, password-reset links and (later) invites are **printed in the API console** where `pnpm dev` runs. Open the link in your browser to follow it.
 
 ## Layout
 
@@ -40,7 +49,8 @@ Open http://localhost:5173. The page shows "API: ok" when the web app can reach 
 | `pnpm lint` | ESLint across the repo |
 | `pnpm db:generate` | Generates a migration from schema changes (`apps/api/src/db/schema.ts`) |
 | `pnpm db:migrate` | Applies migrations to the local database (`data/plan-app.sqlite` by default) |
+| `pnpm db:seed` | Adds the demo users. Safe to re-run |
 
 ## Configuration
 
-All settings are optional environment variables in the repo-root `.env` (see `.env.example`): `DATABASE_PATH`, `API_PORT`, `WEB_PORT`.
+All settings are optional environment variables in the repo-root `.env` (see `.env.example`): `DATABASE_PATH`, `API_PORT`, `WEB_PORT`, `WEB_ORIGIN`, and `BETTER_AUTH_SECRET` (without it, an insecure development secret is used and a warning is printed).
