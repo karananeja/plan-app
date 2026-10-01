@@ -20,7 +20,7 @@ import {
   unarchiveGroup,
   updateGroup,
 } from "./groups/service.ts";
-import { addFriend, listFriends } from "./friends/service.ts";
+import { addFriend, listFriends, removeFriend } from "./friends/service.ts";
 import { invitedPersonFor } from "./people/index.ts";
 import { createMiddleware } from "hono/factory";
 
@@ -86,6 +86,10 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
     .get("/friends", signedIn, (c) => c.json({ friends: listFriends({ db, balances }, c.var.me, c.req.query("q")) }))
     .post("/friends", signedIn, zValidator("json", addFriendInput), async (c) => {
       await addFriend({ db, email, origin: authConfig.origin }, c.var.me, c.req.valid("json").email);
+      return c.json({ ok: true } as const);
+    })
+    .delete("/friends/:personId", signedIn, (c) => {
+      removeFriend({ db, balances }, c.var.me, c.req.param("personId"));
       return c.json({ ok: true } as const);
     })
     .get("/groups", signedIn, (c) => c.json({ groups: listGroups(groupsDeps, c.var.me) }))

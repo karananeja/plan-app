@@ -495,3 +495,38 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] Ticket 10.
+
+---
+
+## Entry 18 — 2026-10-01 — Ticket 10: remove a Friend (TDD), and Spec 01 complete
+
+**Participants:** user, Claude Code (Opus 5.5). Seams approved in Entry 15.
+
+### Decided
+- `DELETE /api/friends/:personId`: refused while the two share a **non-archived** Group (400, naming the Groups) or have a non-zero Net Balance (400). Otherwise it deletes both Friendship rows and records `FriendRemoved` (subject: the removed friend, audience: both). Not friends gives 404.
+- The guards run before the transaction and read through `Balances` and a shared-active-Groups query.
+
+### Changed
+- `apps/api`: `removeFriend`, `sharedActiveGroups`; route; `friend-removal.test.ts` (3 tests).
+- `apps/web`: Remove on each Friend row (with confirm) and an error message for blocked removals.
+
+### Verified
+- `pnpm test`: api 47/47, domain 9/9, every new test went red first. Typecheck, lint and web build are clean (the bundle-size warning remains).
+- **Combined end-to-end check for Tickets 07–10** through the dev proxy against a scratch database with seed data:
+  - Ben adds Chen to Flat 4B.
+  - Rename and colour change; archive; editing while archived gives 400; un-archive.
+  - Ben deleting gives 400 (not the creator).
+  - Chen leaves and then gets 404. Asha removes Ben. Asha leaving as the last member gives 400.
+  - Asha removing Chen gives 400 naming "Goa Trip". After archiving Goa Trip, the removal works, and Chen's Friends no longer include Asha.
+  - Asha deletes Flat 4B, leaving only the archived Goa Trip.
+- The first attempt failed at sign-in (every call got 401 or 404). It didn't happen on a rerun. Probable cause, **not confirmed**: a dev process from the previous end-to-end script was still shutting down. Cleanup now waits 2 s, and the script prints sign-in statuses.
+- **Not verified:** the pages in a real browser.
+
+### Spec 01 status
+- Tickets 01–10 are all resolved.
+- Carried forward:
+  - **Spec 02**: expense-dependent criteria (claimed invites keep Expenses; adding an Expense un-archives a Group; no deleting or changing currency once a Group has Expenses; seed Expenses).
+  - **Spec 03**: replace `noTransactionsYet` and add real-ledger tests for the archive, leave/remove and remove-Friend guards.
+
+### Open / Next
+- [ ] Spec 02 (Expense Splitting & Nudges): `/to-tickets docs/specs/02-expense-splitting-and-nudges.md`.

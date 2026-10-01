@@ -27,6 +27,17 @@ export function FriendsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["friends"] }),
   });
 
+  const remove = useMutation({
+    mutationFn: async (personId: string) => {
+      const res = await api.friends[":personId"].$delete({ param: { personId } });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Couldn't remove this friend.");
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["friends"] }),
+  });
+
   function onAdd(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
@@ -56,6 +67,7 @@ export function FriendsPage() {
         {friends.data?.length === 0 && (
           <p className="text-sm text-muted-foreground">{q ? "No friends match." : "No friends yet. Add someone above."}</p>
         )}
+        <FormError message={remove.error?.message ?? null} />
         <ul className="divide-y rounded-md border">
           {friends.data?.map((f) => (
             <li key={f.personId} className="flex items-center gap-3 p-3">
@@ -69,6 +81,15 @@ export function FriendsPage() {
                 {!f.invited && <p className="truncate text-sm text-muted-foreground">{f.email}</p>}
               </div>
               <BalanceText balances={f.netBalances} />
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={`Remove ${f.invited ? f.email : f.name}`}
+                disabled={remove.isPending}
+                onClick={() => window.confirm(`Remove ${f.invited ? f.email : f.name} from your friends?`) && remove.mutate(f.personId)}
+              >
+                Remove
+              </Button>
             </li>
           ))}
         </ul>

@@ -20,3 +20,4 @@
   - The last member can't leave. You can't remove yourself (use Leave).
   - Leaving and removal are allowed in archived Groups: they change membership, not Group content.
   - Covered by the combined end-to-end check after Ticket 10.
+- 2026-10-01: Combined end-to-end check for Tickets 07–10 passed (see conversation log, Entry 18).

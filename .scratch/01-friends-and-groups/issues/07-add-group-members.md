@@ -16,3 +16,4 @@
 ## Comments
 
 - 2026-10-01: Done. `POST /api/groups/:id/members { emails }`, shared with Group creation through one `addMembers` helper. Each newcomer is friended with everyone who joined before them, so `FriendAdded` is about the newcomer. Covered by the combined end-to-end check after Ticket 10 (see the conversation log).
+- 2026-10-01: Combined end-to-end check for Tickets 07–10 passed (see conversation log, Entry 18).

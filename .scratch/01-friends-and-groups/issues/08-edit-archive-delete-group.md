@@ -21,3 +21,4 @@
   - Spec 02 still has to block deletion and currency changes once a Group has Expenses.
   - Also fixed `activityFor` ordering for events in the same millisecond (now tie-broken by insertion order).
   - Covered by the combined end-to-end check after Ticket 10.
+- 2026-10-01: Combined end-to-end check for Tickets 07–10 passed (see conversation log, Entry 18).
