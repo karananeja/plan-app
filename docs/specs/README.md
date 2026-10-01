@@ -59,7 +59,7 @@ Grilling rounds 1–5 (2026-10-01). Round 5 replaced the original stack. The ful
   - Domain: table-driven + property tests.
   - Web: component tests only for logic-heavy pieces (split editor, notification badge).
   - No end-to-end tests in v1.
-- **Code and tickets**: git + a **private** GitHub repo named **`plan-app`**, with tickets as GitHub Issues (via `/setup-matt-pocock-skills`).
+- **Code and tickets**: local git repo (a GitHub remote can be added later). Tickets are **local markdown** in `.scratch/<feature-slug>/issues/` (see `docs/agents/issue-tracker.md`).
 - **ADRs**: [0001](../adr/0001-balances-derived-from-ledger.md) balances derived from the Ledger · [0002](../adr/0002-settlement-allocation-oldest-first.md) Settlement Allocation · [0003](../adr/0003-activity-is-the-outbox.md) Activity is the outbox (superseded) · [0004](../adr/0004-notifications-are-a-view-over-activity.md) Notifications are a view over Activity.
 
 ## Open questions
