@@ -286,3 +286,29 @@ Spec: [../specs/02-expense-splitting-and-nudges.md](../specs/02-expense-splittin
 ### Open / Next
 - [ ] **Ask the user**: add a component test for the split editor? `docs/specs/README.md` promises one, but this ticket's agreed seams said no web test.
 - [ ] Tickets 04 (non-group + Friend page), 05 (edit with history) and 06 (delete/restore) are unblocked.
+
+---
+
+## Entry 11 — 2026-10-01 — Split editor component test
+
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- Whether to add the split editor component test that `docs/specs/README.md` promises: (a) add it now, recommended, or (b) defer. User: "yes" (taken as (a)).
+
+### Decided
+- **Web test setup**: Vitest with jsdom, Testing Library (`react`, `user-event`, `jest-dom`); config in the Vite config's `test` block; `src/test/setup.ts`.
+- **Seam**: the `AddExpenseDialog` component as a user drives it. Open it, type, switch tabs, and assert on the visible Shares, the remaining text and whether Save is enabled. No mocks: the component's preview uses the real domain functions, and nothing is submitted.
+- Accessibility fix found by the tests: the per-person input label for the current user now reads "Your amount" (was "You's amount").
+
+### Changed
+- `apps/web`: `add-expense-dialog.test.tsx` (4 tests: equal live split and un-ticking; Amounts remaining and Save gating; Percent "too much" and blank-means-out; Shares portions); test setup; dev dependencies; `test` script no longer passes `--passWithNoTests`.
+
+### Verified
+- The tests were written after the component (characterisation), so each was proven by breaking the component:
+  - Save always enabled → the Amounts and Percent tests fail.
+  - The raw calculator message shown instead of `describeRemaining` → the Amounts and Percent tests fail.
+- `pnpm test`: domain 30, api 60, web 4. Typecheck and lint are clean.
+
+### Open / Next
+- [ ] Tickets 04, 05 and 06 are unblocked.

@@ -19,3 +19,4 @@
   - Splits that don't add up give 400 with "₹200.00 left to assign" / "1.00% too much" (shared `describeRemaining`) and `remaining`.
   - The Expense detail returns each Participant's raw input for Ticket 05's edit form.
   - **Open question:** `docs/specs/README.md` says the web app gets component tests for logic-heavy pieces, naming the split editor. This ticket agreed "no automated web test". See the conversation log.
+- 2026-10-01: Open question resolved: the user chose to add the split editor component test (see conversation log, Entry 11).

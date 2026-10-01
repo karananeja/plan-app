@@ -186,7 +186,7 @@ export function AddExpenseDialog({ groupId, currency, members, meId }: { groupId
                     {method !== "equal" && (
                       <span className="flex items-center gap-1">
                         <Input
-                          aria-label={`${label(m)}'s ${method === "exact" ? "amount" : method === "percentage" ? "percent" : "shares"}`}
+                          aria-label={`${m.personId === meId ? "Your" : `${label(m)}'s`} ${method === "exact" ? "amount" : method === "percentage" ? "percent" : "shares"}`}
                           inputMode={method === "shares" ? "numeric" : "decimal"}
                           className="h-8 w-24 text-right"
                           value={values[m.personId] ?? ""}
