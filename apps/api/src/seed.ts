@@ -65,7 +65,7 @@ export async function seed(db: Db, config: AuthConfig) {
       createExpenseInput.parse({
         description, amount, date, category, method: "equal",
         payerId: payerPerson.id,
-        participantIds: participants.map((n) => personByName(n).id),
+        participants: participants.map((n) => ({ personId: personByName(n).id })),
       }),
     );
   }

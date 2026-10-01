@@ -15,7 +15,8 @@ async function goaTrip() {
     name: "Goa Trip",
     memberEmails: ["ben@example.com", "chen@example.com", "divya@example.com"],
   });
-  const ids = Object.fromEntries((await getGroup(asha, id)).members.map((m) => [m.name, m.personId])) as Record<string, string>;
+  const byName = new Map((await getGroup(asha, id)).members.map((m) => [m.name, m.personId]));
+  const ids = { Asha: byName.get("Asha")!, Ben: byName.get("Ben")!, Chen: byName.get("Chen")!, Divya: byName.get("Divya")! };
   return { ...t, asha, ben, chen, divya, groupId: id, ids };
 }
 
@@ -108,7 +109,7 @@ describe("Group Expenses", () => {
       expect((await addGroupExpense(asha, groupId, { description: "One more", amount: "50", payerId: ids.Asha, participantIds: [ids.Asha] })).status).toBe(200);
 
       expect((await listGroups(asha))[0]).toMatchObject({ id: groupId, archived: false });
-      const groupEvents = activityFor(db, ids.Asha!).filter((a) => a.groupId === groupId).map((a) => a.type);
+      const groupEvents = activityFor(db, ids.Asha).filter((a) => a.groupId === groupId).map((a) => a.type);
       expect(groupEvents.slice(0, 2).sort()).toEqual(["ExpenseCreated", "GroupUpdated"]);
     });
 

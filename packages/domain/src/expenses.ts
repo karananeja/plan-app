@@ -12,7 +12,11 @@ export const createExpenseInput = z.object({
   category: z.enum(EXPENSE_CATEGORIES).default("other"),
   note: z.string().trim().max(500).optional(),
   payerId: z.string().min(1),
-  method: z.literal("equal"),
-  participantIds: z.array(z.string().min(1)).max(50),
+  method: z.enum(["equal", "exact", "percentage", "shares"]).default("equal"),
+  /**
+   * In order. `value` is what was typed, read by method: exact → an amount ("70.50"),
+   * percentage → a percent ("33.33"), shares → whole Share Units ("2"). Ignored for equal.
+   */
+  participants: z.array(z.object({ personId: z.string().min(1), value: z.string().trim().optional() })).max(50),
 });
 export type CreateExpenseInput = z.infer<typeof createExpenseInput>;

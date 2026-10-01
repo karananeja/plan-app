@@ -1,4 +1,14 @@
-import { EXPENSE_CATEGORIES, splitExpense, toMinorUnits, formatMoney, type ExpenseCategory } from "@plan-app/domain";
+import {
+  EXPENSE_CATEGORIES,
+  describeRemaining,
+  formatMoney,
+  parseSplitValue,
+  splitExpense,
+  toMinorUnits,
+  type ExpenseCategory,
+  type SplitMethod,
+} from "@plan-app/domain";
+import { cn } from "cn";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState, type FormEvent } from "react";
 import { FormError } from "@/components/auth-card.tsx";
@@ -11,6 +21,13 @@ import { api } from "@/lib/api.ts";
 import { CATEGORY_LABELS, todayLocal } from "@/lib/expenses.ts";
 
 type Member = { personId: string; name: string; email: string; invited: boolean };
+const METHODS: { method: SplitMethod; label: string; hint: string; suffix?: string }[] = [
+  { method: "equal", label: "Equally", hint: "Tick who shares it." },
+  { method: "exact", label: "Amounts", hint: "Enter what each person owes. Leave blank to leave someone out." },
+  { method: "percentage", label: "Percent", hint: "Percentages must total 100%. Leave blank to leave someone out.", suffix: "%" },
+  { method: "shares", label: "Shares", hint: "e.g. 2 for someone who had two portions. Leave blank to leave someone out." },
+];
+
 const selectClass = "h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs";
 
 export function AddExpenseDialog({ groupId, currency, members, meId }: { groupId: string; currency: string; members: Member[]; meId: string }) {
@@ -19,23 +36,43 @@ export function AddExpenseDialog({ groupId, currency, members, meId }: { groupId
   const [amount, setAmount] = useState("");
   const [payerId, setPayerId] = useState(meId);
   const [included, setIncluded] = useState<Set<string>>(() => new Set(members.map((m) => m.personId)));
+  const [method, setMethod] = useState<SplitMethod>("equal");
+  const [values, setValues] = useState<Record<string, string>>({});
   const label = (m: Member) => (m.personId === meId ? "You" : m.invited ? m.email : m.name);
+
+  /** Who's in the split, with what they typed: ticked people for equal, non-blank values otherwise. */
+  const participants = useMemo(
+    (): { personId: string; value?: string }[] =>
+      method === "equal"
+        ? members.filter((m) => included.has(m.personId)).map((m) => ({ personId: m.personId }))
+        : members.filter((m) => values[m.personId]?.trim()).map((m) => ({ personId: m.personId, value: values[m.personId]!.trim() })),
+    [method, members, included, values],
+  );
 
   const preview = useMemo((): { shares?: Map<string, number>; error?: string | null } => {
     let totalMinor: number;
+    let parsed: { personId: string; value?: number }[];
     try {
       totalMinor = toMinorUnits(amount || "0", currency);
+      parsed = participants.map((p) => ({ personId: p.personId, value: parseSplitValue(method, p.value, currency) }));
     } catch (e) {
       return { error: (e as Error).message };
     }
-    const participants = members.filter((m) => included.has(m.personId)).map((m) => ({ personId: m.personId }));
-    const r = splitExpense({ totalMinor, method: "equal", participants });
-    return r.ok ? { shares: new Map(r.shares.map((s) => [s.personId, s.shareMinor])) } : { error: amount ? r.error.message : null };
-  }, [amount, currency, members, included]);
+    const r = splitExpense({ totalMinor, method, participants: parsed });
+    if (r.ok) return { shares: new Map(r.shares.map((s) => [s.personId, s.shareMinor])) };
+    if (!amount) return { error: null };
+    if (r.remaining !== undefined && (method === "exact" || method === "percentage")) {
+      return { error: describeRemaining(method, r.remaining, currency) };
+    }
+    return { error: r.error.message };
+  }, [amount, currency, method, participants]);
 
   const create = useMutation({
-    mutationFn: async (json: { description: string; amount: string; date: string; category: ExpenseCategory; note?: string; payerId: string; participantIds: string[] }) => {
-      const res = await api.groups[":id"].expenses.$post({ param: { id: groupId }, json: { ...json, method: "equal" } });
+    mutationFn: async (json: {
+      description: string; amount: string; date: string; category: ExpenseCategory; note?: string; payerId: string;
+      method: SplitMethod; participants: { personId: string; value?: string }[];
+    }) => {
+      const res = await api.groups[":id"].expenses.$post({ param: { id: groupId }, json });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error ?? "Please check the expense details.");
@@ -45,6 +82,8 @@ export function AddExpenseDialog({ groupId, currency, members, meId }: { groupId
       await queryClient.invalidateQueries({ queryKey: ["groups"] });
       setOpen(false);
       setAmount("");
+      setValues({});
+      setMethod("equal");
     },
   });
 
@@ -59,7 +98,8 @@ export function AddExpenseDialog({ groupId, currency, members, meId }: { groupId
       category: String(form.get("category")) as ExpenseCategory,
       note: note || undefined,
       payerId,
-      participantIds: members.filter((m) => included.has(m.personId)).map((m) => m.personId),
+      method,
+      participants,
     });
   }
 
@@ -111,19 +151,56 @@ export function AddExpenseDialog({ groupId, currency, members, meId }: { groupId
             </div>
           </div>
           <div className="grid gap-2">
-            <Label>Split equally between</Label>
-            <ul className="divide-y rounded-md border">
-              {members.map((m) => (
-                <li key={m.personId}>
-                  <label className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm">
-                    <input type="checkbox" className="size-4 accent-primary" checked={included.has(m.personId)} onChange={() => toggle(m.personId)} />
-                    <span className="flex-1 truncate">{label(m)}</span>
-                    <span className="tabular-nums text-muted-foreground">
-                      {preview.shares?.has(m.personId) ? formatMoney(preview.shares.get(m.personId)!, currency) : "—"}
-                    </span>
-                  </label>
-                </li>
+            <Label>Split</Label>
+            <div className="grid grid-cols-4 gap-1 rounded-md bg-muted p-1" role="tablist" aria-label="Split method">
+              {METHODS.map((m) => (
+                <button
+                  key={m.method}
+                  type="button"
+                  role="tab"
+                  aria-selected={m.method === method}
+                  onClick={() => setMethod(m.method)}
+                  className={cn("rounded px-2 py-1 text-sm", m.method === method ? "bg-background font-medium shadow-xs" : "text-muted-foreground")}
+                >
+                  {m.label}
+                </button>
               ))}
+            </div>
+            <p className="text-xs text-muted-foreground">{METHODS.find((m) => m.method === method)!.hint}</p>
+            <ul className="divide-y rounded-md border">
+              {members.map((m) => {
+                const share = preview.shares?.get(m.personId);
+                const suffix = METHODS.find((x) => x.method === method)!.suffix;
+                return (
+                  <li key={m.personId} className="flex items-center gap-3 px-3 py-2 text-sm">
+                    {method === "equal" ? (
+                      <input
+                        type="checkbox"
+                        aria-label={`Include ${label(m)}`}
+                        className="size-4 accent-primary"
+                        checked={included.has(m.personId)}
+                        onChange={() => toggle(m.personId)}
+                      />
+                    ) : null}
+                    <span className="flex-1 truncate">{label(m)}</span>
+                    {method !== "equal" && (
+                      <span className="flex items-center gap-1">
+                        <Input
+                          aria-label={`${label(m)}'s ${method === "exact" ? "amount" : method === "percentage" ? "percent" : "shares"}`}
+                          inputMode={method === "shares" ? "numeric" : "decimal"}
+                          className="h-8 w-24 text-right"
+                          value={values[m.personId] ?? ""}
+                          onChange={(e) => setValues((v) => ({ ...v, [m.personId]: e.target.value }))}
+                        />
+                        {suffix && <span className="text-muted-foreground">{suffix}</span>}
+                      </span>
+                    )}
+                    <span className="w-24 text-right tabular-nums text-muted-foreground">
+                      {share !== undefined ? formatMoney(share, currency) : "—"}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
           <div className="grid gap-2">

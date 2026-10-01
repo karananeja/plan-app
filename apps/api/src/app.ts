@@ -55,7 +55,7 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
   return new Hono()
     .basePath("/api")
     .onError((err, c) => {
-      if (err instanceof RuleError) return c.json({ error: err.message }, 400);
+      if (err instanceof RuleError) return c.json({ error: err.message, ...err.details }, 400);
       if (err instanceof NotFoundError) return c.json({ error: err.message }, 404);
       // Hono's own errors (e.g. malformed JSON) already carry the right status.
       if (err instanceof HTTPException) return c.json({ error: err.message }, err.status);

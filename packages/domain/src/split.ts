@@ -1,3 +1,5 @@
+import { formatMoney, toMinorUnits } from "./money.ts";
+
 export type SplitMethod = "equal" | "exact" | "percentage" | "shares";
 
 export type SplitInput = {
@@ -79,4 +81,32 @@ export function splitExpense(input: SplitInput): SplitResult {
     shares: input.participants.map((p, i) => ({ personId: p.personId, shareMinor: amounts[i]! })),
     remaining: 0,
   };
+}
+
+/**
+ * Human wording for a Split's `remaining`: "₹200.00 left to assign" or "1.00% too much".
+ * Shared by the API's error and the form's live feedback so they always agree.
+ */
+export function describeRemaining(method: "exact" | "percentage", remaining: number, currency: string, locale = "en-IN"): string {
+  const abs = Math.abs(remaining);
+  const amount = method === "exact" ? formatMoney(abs, currency, locale) : `${(abs / 100).toFixed(2)}%`;
+  return `${amount} ${remaining > 0 ? "left to assign" : "too much"}`;
+}
+
+/**
+ * Reads what a user typed for one Participant into the integer `splitExpense` expects:
+ * exact → minor units ("70.50"), percentage → basis points ("33.33" → 3333), shares → whole units.
+ * Empty → undefined (the calculator then reports it). Throws an Error with a readable message if malformed.
+ */
+export function parseSplitValue(method: SplitMethod, value: string | undefined, currency: string): number | undefined {
+  const v = value?.trim();
+  if (method === "equal" || !v) return undefined;
+  if (method === "exact") return toMinorUnits(v, currency);
+  if (method === "percentage") {
+    const m = /^(\d+)(?:\.(\d{1,2}))?$/.exec(v);
+    if (!m) throw new Error(`"${v}" isn't a percentage with at most 2 decimal places.`);
+    return Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0"));
+  }
+  if (!/^\d+$/.test(v)) throw new Error(`Shares must be whole numbers ("${v}").`);
+  return Number(v);
 }

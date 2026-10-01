@@ -7,14 +7,21 @@ export type ExpenseSummary = {
   payer: { personId: string; name: string }; myEffect: Effect;
 };
 export type ExpenseDetail = ExpenseSummary & {
-  groupId: string | null; method: string; note: string | null;
-  shares: { personId: string; name: string; shareMinor: number }[];
+  groupId: string | null; method: string; note: string | null; version: number;
+  shares: { personId: string; name: string; shareMinor: number; input: string | null }[];
 };
 
-export const addGroupExpense = (b: Browser, groupId: string, body: object) =>
-  b.post(`/api/groups/${groupId}/expenses`, {
-    date: "2026-09-28", category: "food", method: "equal", ...body,
+/** Posts a Group Expense. `participantIds` is shorthand for equal-split `participants`. */
+export const addGroupExpense = (b: Browser, groupId: string, body: { participantIds?: string[] } & Record<string, unknown>) => {
+  const { participantIds, ...rest } = body;
+  return b.post(`/api/groups/${groupId}/expenses`, {
+    date: "2026-09-28",
+    category: "food",
+    method: "equal",
+    ...(participantIds ? { participants: participantIds.map((personId) => ({ personId })) } : {}),
+    ...rest,
   });
+};
 export const groupExpenses = async (b: Browser, groupId: string) =>
   (await json<{ expenses: ExpenseSummary[] }>(b.get(`/api/groups/${groupId}/expenses`))).expenses;
 export const getExpense = (b: Browser, id: string) => json<ExpenseDetail>(b.get(`/api/expenses/${id}`));

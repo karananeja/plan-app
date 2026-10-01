@@ -251,3 +251,38 @@ Spec: [../specs/02-expense-splitting-and-nudges.md](../specs/02-expense-splittin
 
 ### Open / Next
 - [ ] Tickets 03 (every split method), 04 (non-group + Friend page) and 06 (delete/restore) are unblocked.
+
+---
+
+## Entry 10 — 2026-10-01 — Ticket 03: every split method (TDD)
+
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- "yes" to doing Ticket 03 next, then "yes" to the API shape (`participants` with values as typed) and 5 tests.
+
+### Decided
+- **Prefactor first**: `participantIds` became `participants: [{ personId, value? }]` with `method` covering all four. Existing tests stayed green through a test-helper shorthand.
+- **Values are what was typed**, read by `parseSplitValue` in `packages/domain`: exact → minor units, percentage → basis points (≤ 2 decimals), shares → whole units. It moved from the API service into the domain package so the form's live preview reads values exactly like the server. The stored integer is returned as `input` text for editing (`"700.00"`, `"33.33"`, `"2"`) via the new `fromMinorUnits`.
+- **Readable "remaining"**: `describeRemaining` (domain) gives "₹200.00 left to assign" / "1.00% too much". The API returns it as the 400 message plus `remaining`. `RuleError` now carries extra `details`.
+- **Form**: method tabs (Equally / Amounts / Percent / Shares). For non-equal methods, a blank value means "not in the split". The form shows live Shares and the remaining text from the same domain functions, and Save is disabled while the split is invalid.
+
+### Changed
+- `packages/domain`: `parseSplitValue`, `describeRemaining`, `fromMinorUnits`; `createExpenseInput` widened.
+- `apps/api`: expenses service (value parsing, stored input, readable errors); `RuleError.details`; `split-methods.test.ts` (5 tests); test helpers.
+- `apps/web`: the Add expense dialog now supports every method.
+
+### Verified
+- `pnpm test`: api 60/60, domain 30/30. Exact and remaining-message tests went red first.
+- **TDD slips**: percentage and share parsing were written in test 1's step, so tests 2–3 passed on first run.
+  - The percentage test was confirmed to fail with decimal parsing broken.
+  - The Share Units mutation (dropping the API's whole-number check) was **not** caught, because the calculator rejects fractional units too. That check only gives a friendlier message.
+  - Test 5 (Payer not a Participant) passed on first run because Ticket 02's effect rule already covers it.
+- Typecheck, lint and web build are clean.
+- End-to-end through the dev proxy: percentage and shares succeed; exact short by ₹200 gives 400 "₹200.00 left to assign" (remaining 20000); percentage over by 1% gives 400 "1.00% too much" (remaining -100).
+- Incident: an earlier attempt ran while my previous dev servers still held the ports (the script printed a warning and carried on), and its requests hit the old servers (401s). My own leftover servers were identified by their scratch `DATABASE_PATH` and stopped by PID. The cleanup was re-tested in isolation and works. The script now **aborts** when ports stay busy.
+- **Not verified:** the form in a real browser.
+
+### Open / Next
+- [ ] **Ask the user**: add a component test for the split editor? `docs/specs/README.md` promises one, but this ticket's agreed seams said no web test.
+- [ ] Tickets 04 (non-group + Friend page), 05 (edit with history) and 06 (delete/restore) are unblocked.

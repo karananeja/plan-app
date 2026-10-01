@@ -33,3 +33,11 @@ export function formatMoney(minor: number, currency: Currency, locale = "en-IN")
     `${sign}${decimal}` as Intl.StringNumericLiteral,
   );
 }
+
+/** Integer minor units back to a plain decimal string for editing, e.g. 70000 INR → "700.00". */
+export function fromMinorUnits(minor: number, currency: Currency): string {
+  const digits = minorDigits(currency);
+  const sign = minor < 0 ? "-" : "";
+  const abs = String(Math.abs(minor)).padStart(digits + 1, "0");
+  return sign + (digits === 0 ? abs : `${abs.slice(0, -digits)}.${abs.slice(-digits)}`);
+}

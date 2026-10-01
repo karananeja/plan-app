@@ -1,4 +1,4 @@
-import { splitExpense, toMinorUnits, type CreateExpenseInput } from "@plan-app/domain";
+import { describeRemaining, fromMinorUnits, parseSplitValue, splitExpense, toMinorUnits, type CreateExpenseInput, type SplitMethod } from "@plan-app/domain";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { Db } from "../db/client.ts";
@@ -28,18 +28,42 @@ function toMinor(amount: string, currency: string): number {
   }
 }
 
+/** Reads what was typed for each Participant (see parseSplitValue), as a 400 if malformed. */
+function parseValue(method: SplitMethod, value: string | undefined, currency: string): number | undefined {
+  try {
+    return parseSplitValue(method, value, currency);
+  } catch (e) {
+    throw new RuleError((e as Error).message);
+  }
+}
+
+/** The stored input shown back for editing: an amount, a percent or a number of shares. */
+function formatInput(method: string, input: number | null, currency: string): string | null {
+  if (input === null) return null;
+  if (method === "exact") return fromMinorUnits(input, currency);
+  if (method === "percentage") return (input / 100).toFixed(2);
+  return String(input);
+}
+
 /** A Group Member records an Expense in the Group's currency. */
 export function createGroupExpense({ db }: ExpensesDeps, me: Person, groupId: string, input: CreateExpenseInput) {
   const id = randomUUID();
   db.transaction((tx) => {
     const g = requireMembership(tx, me, groupId);
     const members = new Set(memberIds(tx, groupId));
-    if (![input.payerId, ...input.participantIds].every((pid) => members.has(pid))) {
+    if (![input.payerId, ...input.participants.map((p) => p.personId)].every((pid) => members.has(pid))) {
       throw new RuleError("Everyone on a group expense must be a member of the group.");
     }
     const totalMinor = toMinor(input.amount, g.currency);
-    const split = splitExpense({ totalMinor, method: input.method, participants: input.participantIds.map((personId) => ({ personId })) });
-    if (!split.ok) throw new RuleError(split.error.message);
+    const participants = input.participants.map((p) => ({ personId: p.personId, value: parseValue(input.method, p.value, g.currency) }));
+    const split = splitExpense({ totalMinor, method: input.method, participants });
+    if (!split.ok) {
+      const { remaining } = split;
+      if (remaining !== undefined && (input.method === "exact" || input.method === "percentage")) {
+        throw new RuleError(describeRemaining(input.method, remaining, g.currency), { remaining });
+      }
+      throw new RuleError(split.error.message);
+    }
     const now = new Date();
     tx.insert(expense)
       .values({
@@ -49,7 +73,11 @@ export function createGroupExpense({ db }: ExpensesDeps, me: Person, groupId: st
       })
       .run();
     tx.insert(expenseParticipant)
-      .values(split.shares.map((s, position) => ({ expenseId: id, personId: s.personId, position, input: null, shareMinor: s.shareMinor })))
+      .values(
+        split.shares.map((s, position) => ({
+          expenseId: id, personId: s.personId, position, input: participants[position]!.value ?? null, shareMinor: s.shareMinor,
+        })),
+      )
       .run();
     if (g.archivedAt) {
       // Spending in an archived Group brings it back (Spec 01).
@@ -75,16 +103,21 @@ export function createGroupExpense({ db }: ExpensesDeps, me: Person, groupId: st
   return { id };
 }
 
+type Share = { personId: string; name: string; shareMinor: number; input: number | null };
+
 function sharesFor(db: Db, expenseIds: string[]) {
-  if (expenseIds.length === 0) return new Map<string, { personId: string; name: string; shareMinor: number }[]>();
+  if (expenseIds.length === 0) return new Map<string, Share[]>();
   const rows = db
-    .select({ expenseId: expenseParticipant.expenseId, personId: person.id, name: person.name, shareMinor: expenseParticipant.shareMinor })
+    .select({
+      expenseId: expenseParticipant.expenseId, personId: person.id, name: person.name,
+      shareMinor: expenseParticipant.shareMinor, input: expenseParticipant.input,
+    })
     .from(expenseParticipant)
     .innerJoin(person, eq(person.id, expenseParticipant.personId))
     .where(inArray(expenseParticipant.expenseId, expenseIds))
     .orderBy(expenseParticipant.position)
     .all();
-  const byExpense = new Map<string, { personId: string; name: string; shareMinor: number }[]>();
+  const byExpense = new Map<string, Share[]>();
   for (const { expenseId, ...share } of rows) byExpense.set(expenseId, [...(byExpense.get(expenseId) ?? []), share]);
   return byExpense;
 }
@@ -134,7 +167,10 @@ export function getExpense({ db }: ExpensesDeps, me: Person, expenseId: string) 
     method: row.e.method,
     note: row.e.note,
     version: row.e.version,
-    shares: sharesFor(db, [expenseId]).get(expenseId) ?? [],
+    shares: (sharesFor(db, [expenseId]).get(expenseId) ?? []).map((s) => ({
+      ...s,
+      input: formatInput(row.e.method, s.input, row.e.currency),
+    })),
   };
 }
 
