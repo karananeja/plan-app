@@ -17,14 +17,18 @@ export function GroupPage() {
   const navigate = useNavigate();
   const me = useMe();
   const action = useMutation({
-    mutationFn: async (kind: "archive" | "unarchive" | "delete") => {
+    mutationFn: async (kind: "archive" | "unarchive" | "delete" | "leave" | { remove: string }) => {
       const target = api.groups[":id"];
       const res =
-        kind === "delete"
-          ? await target.$delete({ param: { id } })
-          : kind === "archive"
-            ? await target.archive.$post({ param: { id } })
-            : await target.unarchive.$post({ param: { id } });
+        typeof kind === "object"
+          ? await target.members[":personId"].$delete({ param: { id, personId: kind.remove } })
+          : kind === "delete"
+            ? await target.$delete({ param: { id } })
+            : kind === "leave"
+              ? await target.leave.$post({ param: { id } })
+              : kind === "archive"
+                ? await target.archive.$post({ param: { id } })
+                : await target.unarchive.$post({ param: { id } });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error ?? "That didn't work. Please try again.");
@@ -33,7 +37,7 @@ export function GroupPage() {
     },
     onSuccess: async (kind) => {
       await queryClient.invalidateQueries({ queryKey: ["groups"] });
-      if (kind === "delete") navigate("/groups");
+      if (kind === "delete" || kind === "leave") navigate("/groups");
     },
   });
   const addMembers = useMutation({
@@ -97,6 +101,14 @@ export function GroupPage() {
               <Button variant="outline" size="sm" onClick={() => action.mutate("archive")} disabled={action.isPending}>Archive</Button>
             </>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={action.isPending}
+            onClick={() => window.confirm(`Leave "${g.name}"?`) && action.mutate("leave")}
+          >
+            Leave
+          </Button>
           {me.data?.person?.id === g.createdById && (
             <Button
               variant="destructive"
@@ -122,6 +134,17 @@ export function GroupPage() {
                 </p>
               </div>
               <BalanceText balances={m.groupBalances} owedLabel="gets back" oweLabel="owes" />
+              {m.personId !== me.data?.person?.id && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Remove ${m.invited ? m.email : m.name}`}
+                  disabled={action.isPending}
+                  onClick={() => window.confirm(`Remove ${m.invited ? m.email : m.name} from "${g.name}"?`) && action.mutate({ remove: m.personId })}
+                >
+                  Remove
+                </Button>
+              )}
             </li>
           ))}
         </ul>

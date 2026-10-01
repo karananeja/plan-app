@@ -187,6 +187,35 @@ export function deleteGroup({ db }: GroupsDeps, me: Person, groupId: string) {
   });
 }
 
+function requireSettledUp(balances: Balances, groupId: string, personId: string, message: string) {
+  if (balances.groupBalances(groupId, personId).length > 0) throw new RuleError(message);
+}
+
+/** I leave a Group. Allowed only when my Group Balance is zero. Friendships made through it stay. */
+export function leaveGroup({ db, balances }: GroupsDeps, me: Person, groupId: string) {
+  db.transaction((tx) => {
+    requireMembership(tx, me, groupId);
+    const audience = memberIds(tx, groupId);
+    if (audience.length === 1) throw new RuleError("You're the last member. Archive or delete the group instead.");
+    requireSettledUp(balances, groupId, me.id, "You need to settle up in this group before you can leave it.");
+    tx.delete(groupMember).where(and(eq(groupMember.groupId, groupId), eq(groupMember.personId, me.id))).run();
+    recordActivity(tx, { type: "GroupMemberLeft", actorId: me.id, subject: { type: "person", id: me.id }, groupId, audience });
+  });
+}
+
+/** Any member removes another member whose Group Balance is zero. The removed person is in the audience. */
+export function removeGroupMember({ db, balances }: GroupsDeps, me: Person, groupId: string, personId: string) {
+  db.transaction((tx) => {
+    requireMembership(tx, me, groupId);
+    const audience = memberIds(tx, groupId);
+    if (!audience.includes(personId)) throw new NotFoundError("That person isn't in this group");
+    if (personId === me.id) throw new RuleError("To leave the group yourself, use Leave.");
+    requireSettledUp(balances, groupId, personId, "They need to settle up in this group before they can be removed.");
+    tx.delete(groupMember).where(and(eq(groupMember.groupId, groupId), eq(groupMember.personId, personId))).run();
+    recordActivity(tx, { type: "GroupMemberRemoved", actorId: me.id, subject: { type: "person", id: personId }, groupId, audience });
+  });
+}
+
 const memberCount = sql<number>`(select count(*) from ${groupMember} gm where gm.group_id = ${group.id})`;
 const lastActivityAt = sql<number>`coalesce((select max(${activity.occurredAt}) from ${activity} where ${activity.groupId} = ${group.id}), ${group.createdAt})`;
 

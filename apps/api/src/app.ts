@@ -14,7 +14,9 @@ import {
   createGroup,
   deleteGroup,
   getGroup,
+  leaveGroup,
   listGroups,
+  removeGroupMember,
   unarchiveGroup,
   updateGroup,
 } from "./groups/service.ts";
@@ -97,6 +99,14 @@ export function createApp({ db, email, auth: authConfig, balances = noTransactio
     })
     .delete("/groups/:id", signedIn, (c) => {
       deleteGroup(groupsDeps, c.var.me, c.req.param("id"));
+      return c.json({ ok: true } as const);
+    })
+    .post("/groups/:id/leave", signedIn, (c) => {
+      leaveGroup(groupsDeps, c.var.me, c.req.param("id"));
+      return c.json({ ok: true } as const);
+    })
+    .delete("/groups/:id/members/:personId", signedIn, (c) => {
+      removeGroupMember(groupsDeps, c.var.me, c.req.param("id"), c.req.param("personId"));
       return c.json({ ok: true } as const);
     })
     .post("/groups/:id/archive", signedIn, (c) => {

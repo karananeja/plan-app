@@ -473,3 +473,25 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] Ticket 09.
+
+---
+
+## Entry 17 — 2026-10-01 — Ticket 09: leave a Group and remove a member (TDD)
+
+**Participants:** user, Claude Code (Opus 5.5). Seams approved in Entry 15.
+
+### Decided
+- `POST /api/groups/:id/leave`: needs a zero Group Balance for me, and more than one member. The last member gets "Archive or delete the group instead". Records `GroupMemberLeft` for everyone who was a member, including the leaver.
+- `DELETE /api/groups/:id/members/:personId`: any member, and the target must have a zero Group Balance. Records `GroupMemberRemoved` with the removed person in the audience. Removing yourself is refused ("use Leave"); a target who isn't a member gets 404.
+- Friendships made through the Group are kept after leaving or removal.
+- **Leaving and removal are allowed in archived Groups.** — **why:** archiving freezes the Group's content, not who belongs to it. (A judgement call; the ticket was silent.)
+
+### Changed
+- `apps/api`: `leaveGroup`, `removeGroupMember`, `requireSettledUp`; routes; `group-leave.test.ts` (4 tests).
+- `apps/web`: Leave button (with confirm), and Remove on each other member's row (with confirm).
+
+### Verified
+- `pnpm test`: api 44/44, every new test went red first. Typecheck and lint are clean. The end-to-end check runs after Ticket 10.
+
+### Open / Next
+- [ ] Ticket 10.
