@@ -10,7 +10,7 @@ Shared money only works if everyone knows what changed. Otherwise a friend adds 
 
 ## Solution
 
-Every Activity (Spec 04) that involves me, other than my own actions, is a Notification for me. Notifications live in an in-app notification centre with an unread badge. While the app is open, it polls for new ones. Nothing is sent outside the app in v1. The only emails the app sends are sign-in codes and invites (Spec 01).
+Every Activity (Spec 04) that involves me, other than my own actions, is a Notification for me. Notifications live in an in-app notification centre with an unread badge. While the app is open, it polls for new ones. Nothing is sent outside the app in v1. The only emails the app sends are account emails (verification, password reset) and invites (Spec 01).
 
 ## User Stories
 

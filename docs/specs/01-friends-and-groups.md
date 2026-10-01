@@ -13,7 +13,7 @@ Users build a friend list by inviting people by email, whether or not those peop
 
 ## User Stories
 
-1. As a User, I want to sign up with Google, or with my email and a one-time code, and have a profile with my name, email, and avatar, so that friends can recognise me.
+1. As a User, I want to sign up with Google, or with my email and a password, and have a profile with my name, email, and avatar, so that friends can recognise me.
 2. As a User, I want to add a Friend by email address, so that I can split expenses with them.
 3. _(Deferred from v1.)_ As a User, I want to add a Friend by phone number, so that I can add people whose email I don't know.
 4. _(Deferred from v1.)_ As a User, I want to pick Friends from my phone contacts, so that I don't have to type their details.
@@ -47,8 +47,8 @@ Users build a friend list by inviting people by email, whether or not those peop
   - *Friendship*: mutual friend links between people.
   - *Groups*: Groups, Group Members, group lifecycle (active → archived).
 - **Person identity**: one `Person` concept covers both a User and an Invited Person (`status: invited | active`). Expenses always reference a Person, so claiming an invite is a status change, not a data migration.
-- **Sign-in**: better-auth with Google sign-in and email one-time code. Emails are always verified. Locally, the `EmailSender` prints codes and invite emails (with the join link) to the API console. A seed script creates several users (email sign-in), sample Groups and Expenses.
-- **Invites are by email only in v1.** On sign-up, a verified email matches and claims an Invited Person. Phone numbers aren't collected in v1.
+- **Sign-in**: better-auth with Google sign-in and email + password. Google emails count as verified. Password accounts must verify their email (by an emailed link) before they can claim an invite, and can reset a forgotten password by an emailed link. Locally, the `EmailSender` prints verification links, reset links and invite emails (with the join link) to the API console. A seed script creates several users with known passwords (already verified), sample Groups and Expenses.
+- **Invites are by email only in v1.** An Invited Person is claimed when an account's email is **verified** (at Google sign-up, or when a password account clicks its verification link), never on an unverified sign-up. Phone numbers aren't collected in v1.
 - **Removing a Friend** is blocked while the Net Balance isn't zero or the two share any non-archived Group.
 - **Auto-friending** happens in two cases: everyone in the same Group, and everyone on the same non-group Expense (Payer and Participants), all become Friends with each other.
 - **Friendship is mutual and automatic**: adding someone creates the link both ways with no accept step in v1. Being in the same Group creates Friendships between all members.

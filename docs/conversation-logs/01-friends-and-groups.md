@@ -154,3 +154,27 @@ Spec: [../specs/01-friends-and-groups.md](../specs/01-friends-and-groups.md) · 
 
 ### Open / Next
 - [ ] The user confirms the overall design, then: git init, private GitHub repo `plan-app`, `/setup-matt-pocock-skills`, tickets, TDD implementation.
+
+---
+
+## Entry 7 — 2026-10-01 — Sign-in corrected to email + password
+
+**Session goal:** Break Spec 01 into tickets (`/to-tickets`). A sign-in correction came up while reviewing the draft.
+**Participants:** user, Claude Code (Opus 5.5)
+
+### Asked
+- User: "correction, it is email password login and not email otp login".
+
+### Decided
+- Sign-in is Google or email + password, via better-auth. This replaces the email one-time code from round 5 (Q43).
+- An Invited Person is claimed only when the account's email is **verified**. Google emails count as verified; password accounts verify via an emailed link. — **why:** a password sign-up doesn't prove the person owns the email, so claiming on sign-up would let anyone take over an invited friend's history.
+- Password reset by emailed link is included in v1. — **why:** a password login needs it, and better-auth provides it.
+- Seed users have known passwords and are pre-verified.
+
+### Changed
+- `docs/specs/01-friends-and-groups.md`: story 1, sign-in and invite-matching decisions.
+- `docs/specs/README.md`: sign-in, notification email and auth lines.
+- `docs/specs/05-notifications.md`: list of emails sent.
+
+### Open / Next
+- [ ] Approve the Spec 01 ticket breakdown, then publish to `.scratch/01-friends-and-groups/issues/`.

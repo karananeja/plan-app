@@ -36,11 +36,11 @@ Grilling rounds 1–5 (2026-10-01). Round 5 replaced the original stack. The ful
 
 - **Purpose**: v1 is a **local MVP**. It runs on one machine (`localhost`) and is usable end to end there. Config comes from environment variables so it can be deployed later; deployment is not part of v1.
 - **Platform**: a responsive web app.
-- **Sign-in**: **Google sign-in** (needs your own OAuth client ID and secret in `.env`) and **email one-time code**. Locally, emails (codes and invites) are printed to the API console. A **seed script** creates several users who sign in with email codes, plus sample Groups and Expenses. Verified email is the key for matching invites.
+- **Sign-in**: **Google sign-in** (needs your own OAuth client ID and secret in `.env`) and **email + password**. Email verification is required before an invite can be claimed, and password reset is by emailed link. Locally, all emails (verification links, reset links, invites) are printed to the API console. A **seed script** creates several users with known passwords (already verified), plus sample Groups and Expenses. Verified email is the key for matching invites.
 - **Currency**: one currency per Group and per non-group Expense. No conversion. Default comes from the creator's profile currency (prefilled from their locale).
 - **Trust model**: high trust. Any Participant or Group Member can edit or delete Expenses; only the two parties may record a Settlement; nothing needs confirmation; every change is kept in history.
 - **Visibility**: Group Transactions are visible to all Group Members, including history from before they joined. Non-group Transactions are visible only to the people involved.
-- **Notifications**: **in-app only, by polling** (every 30 s while the tab is visible, and on focus). There's no push and no notification emails. Email is used only for sign-in codes and invites.
+- **Notifications**: **in-app only, by polling** (every 30 s while the tab is visible, and on focus). There's no push and no notification emails. Email is used only for account emails (verification, password reset) and invites.
 - **Nudges**: in-app only. Disabled for Invited Persons.
 - **v1 scope**: keep simplify debts and CSV export. Cut receipt photos, the weekly digest, SMS, phone invites, the contact picker, notification preferences/mute, Payment Requests, and account deletion (post-v1 plan: anonymise at zero balances; never hard delete).
 - **Vocabulary**: see [GLOSSARY.md](../../GLOSSARY.md). In particular: Transaction, Spend vs Paid Out, Group Balance vs Group Debt, Settlement Allocation.
@@ -52,7 +52,7 @@ Grilling rounds 1–5 (2026-10-01). Round 5 replaced the original stack. The ful
   - `apps/api`: **Node.js** + **Hono**, with zod validation. The web app uses Hono's typed RPC client.
   - `packages/domain`: pure logic (split calculator, Settlement Allocation, debt simplifier) plus the zod schemas both apps share.
 - **Database**: **SQLite** via **Drizzle + better-sqlite3**. Money is stored as integers; Expense dates are `YYYY-MM-DD` text (the calendar date on the bill).
-- **Auth**: **better-auth** (Google + email one-time code) on the same SQLite database. Email goes through an `EmailSender` interface; locally it logs to the console.
+- **Auth**: **better-auth** (Google + email/password, with email verification and password reset) on the same SQLite database. Email goes through an `EmailSender` interface; locally it logs to the console.
 - **Events**: services write each Activity row in the same database transaction as the change. Notifications are a query over Activity ([ADR 0004](../adr/0004-notifications-are-a-view-over-activity.md)).
 - **Tests**: Vitest.
   - API: service functions called directly against a **fresh in-memory SQLite** per test, with migrations applied.
